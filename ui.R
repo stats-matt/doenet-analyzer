@@ -4,10 +4,13 @@ shinyUI(fluidPage(
   titlePanel("Doenet Data Analyzer"),
   sidebarLayout(
     sidebarPanel(
-      width = 2,
+      width = 3,
       actionButton("update", "Update Data", icon = icon("sync")),
       #bookmarkButton(),
-      downloadButton('downloadData', 'Download Data')
+      downloadButton('downloadData', 'Download Data'),
+      #h1("Compare experiments:"),
+      textInput("extra_id", "Extra DoenetID"),
+      actionButton("submit_extra", "Submit")
     ),
     mainPanel(
       tabsetPanel(
