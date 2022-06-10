@@ -18,3 +18,14 @@ events <- x$events[[1]]
 View(events)
 cleaned = clean_events(events)
 View(cleaned)
+
+typeof(renderUI({textInput(paste0("id",i), paste0("Deonet ID",i))}))
+data.frame(renderUI({textInput(paste0("id",i), paste0("Deonet ID",i))}))
+class(renderUI({textInput(paste0("id",i), paste0("Deonet ID",i))}))
+x = list(renderUI({textInput(paste0("id",1), paste0("Deonet ID",1))}),renderUI({textInput(paste0("id",2), paste0("Deonet ID",2))}))
+x[[1]]
+x[[2]]
+x[[3]]
+x[[4]]
+num_inputs = 3
+(num_inputs+1):5

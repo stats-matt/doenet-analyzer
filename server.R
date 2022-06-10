@@ -22,26 +22,24 @@ shinyServer(function(input, output) {
   #Third is the list that contains the event log
   #df contains this 1 by 3 frame at the end of this block
   
-  
-  # if (!is.null(renderText(getQueryString()[["data"]]))) {
-  #   df <- eventReactive(input$update, {
-  #     stream_in(file(
-  #       paste0(
-  #         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-  #         getQueryString()[["data"]]
-  #       )
-  #     ))
-  #   })
-  
+
+  if (!is.null(renderText(getQueryString()[["data"]]))) {
+    df <- eventReactive(input$submit_extra | input$update, {
+      if(input$submit_extra != 0){
+        link = paste0("https://www.doenet.org/api/getEventData.php?doenetId[]=",
+                      getQueryString()[["data"]], "&doenetId[]=",input$extra_id)
+      }
+      else{
+        link = paste0("https://www.doenet.org/api/getEventData.php?doenetId[]=",
+                      getQueryString()[["data"]])
+      }
+      stream_in(file(link))
+    })
+  }
+
   
     
-   link = "https://www.doenet.org/api/getEventData.php?doenetId[]=_YImZRcgrUqyNBLHd0tbP2"
-   df <- eventReactive(input$submit_extra | input$update, {
-      if(input$submit_extra != 0){
-        link = paste0(link, "&doenetId[]=",input$extra_id)
-        }
-     stream_in(file(link))
-    })
+
     
     #get set dataset (for testing)
     # df <- eventReactive(input$update, {
