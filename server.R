@@ -221,6 +221,16 @@ shinyServer(function(input, output) {
         geom_histogram() +
         labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
     )
+    
+    #This displays a plot of average submissions per question    
+    output$hist_submissions <- renderPlot({
+      submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
+      totals <- table(submitted_data()$componentName)/n_distinct(events()$userId, na.rm = TRUE)
+      ggplot(as.data.frame(totals), aes(x=Var1, y=Freq)) +
+        geom_bar(stat="identity") +
+        labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question")
+    })
+    
     #This is a plot that shows time to credit for each problem
     output$time_plot <- renderPlot({
     cleaned() %>%
