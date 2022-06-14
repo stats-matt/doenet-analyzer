@@ -231,6 +231,17 @@ shinyServer(function(input, output) {
         labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question")
     })
     
+    #This displays a plot of the submission percentiles for a specific question
+    output$q_submissions <- renderPlot({
+      q_data <- function(){cleaned()[cleaned()$verb=="submitted" &
+                                     cleaned()$componentName==input$subm_q,]}
+      n_subm_by_id <- table(q_data()$userId) %>% as.data.frame()
+      ggplot(n_subm_by_id, aes(x=Freq)) +
+        geom_bar(stat="count") +
+        labs(x="Number of Submissions", y="Number of Students", title = "Distribution of Submissions")
+    })
+    
+    
     #This is a plot that shows time to credit for each problem
     output$time_plot <- renderPlot({
     cleaned() %>%
