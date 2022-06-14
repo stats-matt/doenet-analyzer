@@ -11,7 +11,14 @@ shinyUI(fluidPage(
       #h1("Compare experiments:"),
       #textInput("extra_id", "Extra DoenetID"),
       #actionButton("submit_extra", "Submit"),
-      numericInput("numid","Number of Doenet IDs",value=1, min = 1, max = 5, step=1),
+      numericInput(
+        "numid",
+        "Number of Doenet IDs",
+        value = 1,
+        min = 1,
+        max = 5,
+        step = 1
+      ),
       #actionButton("gennum","next"),
       
       #hard-coded ui for doenet ids
