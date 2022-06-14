@@ -263,7 +263,7 @@ shinyServer(function(input, output) {
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -274,7 +274,7 @@ shinyServer(function(input, output) {
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
