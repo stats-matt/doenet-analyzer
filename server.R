@@ -166,7 +166,49 @@ shinyServer(function(input, output) {
         value =  c(500, 10000)
       )
     })
-  
+    
+    # This renders the summary data in a table
+    output$summary <- renderDataTable(summary_data())
+    
+    
+    #This gives allows the user to download the data shown in a csv file for their
+    #own purposes
+    output$downloadData <- downloadHandler(
+      filename = function() {
+        paste('events-', Sys.Date(), '.csv', sep = '')
+      },
+      content = function(file) {
+        write.csv(events(), file)
+      }
+    )
+    
+    #This displays a series of histograms for scores on each problem on each page
+    output$hist_prob <- renderPlot(
+      summary_data() %>%
+        ggplot(aes(x = score)) +
+        geom_histogram() +
+        facet_grid(pageNumber ~ problem) +
+        labs(x = "Score on Problem", y = "Count", title = "Breakdown by Problem")
+    )
+    #This displays a histogram of overall scores on the activity
+    output$hist_total <- renderPlot(
+      summary_data() %>%
+        group_by(userId) %>%
+        summarize(total = sum(score)) %>%
+        ggplot(aes(x = total)) +
+        geom_histogram() +
+        labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
+    )
+    
+    #This displays a plot of average submissions per question    
+    output$hist_submissions <- renderPlot({
+      submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
+      totals <- table(submitted_data()$componentName)/n_distinct(events()$userId, na.rm = TRUE)
+      ggplot(as.data.frame(totals), aes(x=Var1, y=Freq)) +
+        geom_bar(stat="identity") +
+        labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question")
+    })
+    
   # creates a table of cleaned data
   output$cleaned_data <- renderDataTable(cleaned())
   
@@ -215,39 +257,7 @@ shinyServer(function(input, output) {
   summary_data <- reactive({
     summarize_events(cleaned())
   })
-  
-  # This renders the summary data in a table
-  output$summary <- renderDataTable(summary_data())
-  
-  
-  #This gives allows the user to download the data shown in a csv file for their
-  #own purposes
-  output$downloadData <- downloadHandler(
-    filename = function() {
-      paste('events-', Sys.Date(), '.csv', sep = '')
-    },
-    content = function(file) {
-      write.csv(events(), file)
-    }
-  )
-  
-  #This displays a series of histograms for scores on each problem on each page
-  output$hist_prob <- renderPlot(
-    summary_data() %>%
-      ggplot(aes(x = score)) +
-      geom_histogram() +
-      facet_grid(pageNumber ~ problem) +
-      labs(x = "Score on Problem", y = "Count", title = "Breakdown by Problem")
-  )
-  #This displays a histogram of overall scores on the activity
-  output$hist_total <- renderPlot(
-    summary_data() %>%
-      group_by(userId) %>%
-      summarize(total = sum(score)) %>%
-      ggplot(aes(x = total)) +
-      geom_histogram() +
-      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
-  )
+    
   #This is a plot that shows time to credit for each problem
   output$time_plot <- renderPlot({
     cleaned() %>%
