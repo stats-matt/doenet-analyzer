@@ -1,25 +1,16 @@
 clean_events <- function(events) {
   # summarize events page
-  
-  #So this block is creating a column for timestamp (formatted nicely)
-  #And then another column called time that is time since the first time 
-  #the activity was used.
   events <-
     events %>%
     group_by(userId) %>%
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time = timestamp - min(timestamp))
 
-  #This unpacks the json column context into a series of columns, one for each
-  # question, as well as an answer ancestor, and credit achieved on each question
-  # default value for no credit achieved is NA
 events <-
   events %>%
   mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
   unnest(new)
-  
-  #This unpacks the json column object into name and componentName and 
-  # componentType columns
+
 events <-
   events %>%
   mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
@@ -32,5 +23,36 @@ events <-
 # events <-
 #   events %>%
 #   filter(!is.na(documentCreditAchieved))
+
+
+
+
+events$version_num = NA
+processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
+processed = processed[order(processed$min_stamp),]
+dict = c(1:nrow(processed))
+names(dict) = processed$activityCid
+
+for(i in (1:(nrow(events)))){
+  working_id = events[[i,4]]
+  events[[i,24]] = dict[working_id]
+}
+
 return(events)
+}
+
+summarize_events <- function(data) {
+  out <-
+    data %>%
+    select(userId, starts_with("X"), time, timestamp, pageNumber, version_num) %>%
+    group_by(userId, pageNumber, version_num) %>%
+    pivot_longer(cols = starts_with("X"),
+                 names_to = "problem",
+                 values_to = "score") %>%
+    ungroup() %>%
+    filter(score != -Inf) %>% 
+    group_by(problem,version_num) %>% 
+    mutate(avg = mean(score))%>% 
+    ungroup()
+  return(out)
 }
