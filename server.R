@@ -126,8 +126,8 @@ shinyServer(function(input, output) {
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        "_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
-        #getQueryString()[["data"]]
+        #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
+        getQueryString()[["data"]]
         #end_of_link
       )
     ))
