@@ -6,10 +6,11 @@ clean_events <- function(events,min_date,max_date) {
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time = timestamp - min(timestamp))
   
+
   
 
 events<- events %>% filter(between(timestamp, min_date,max_date))
-
+  
 events <-
   events %>%
   mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
@@ -50,20 +51,26 @@ for(i in (1:(nrow(events)))){
 }
 
 return(events)
+
 }
 
 summarize_events <- function(data) {
   out <-
     data %>%
-    select(userId, starts_with("X"), time, timestamp, pageNumber, version_num) %>%
+    select(userId,
+           starts_with("X"),
+           time,
+           timestamp,
+           pageNumber,
+           version_num) %>%
     group_by(userId, pageNumber, version_num) %>%
     pivot_longer(cols = starts_with("X"),
                  names_to = "problem",
                  values_to = "score") %>%
     ungroup() %>%
-    filter(score != -Inf) %>% 
-    group_by(problem,version_num) %>% 
-    mutate(avg = mean(score))%>% 
+    filter(score != -Inf) %>%
+    group_by(problem, version_num) %>%
+    mutate(avg = mean(score)) %>%
     ungroup()
   return(out)
 }
