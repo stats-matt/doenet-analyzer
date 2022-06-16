@@ -1,10 +1,14 @@
-clean_events <- function(events) {
+clean_events <- function(events,min_date,max_date) {
   # summarize events page
   events <-
     events %>%
     group_by(userId) %>%
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time = timestamp - min(timestamp))
+  
+  
+
+events<- events %>% filter(between(timestamp, min_date,max_date))
 
 events <-
   events %>%
@@ -14,6 +18,10 @@ events <-
 events <-
   events %>%
   mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
+  unnest(new)
+events <- 
+  events %>% 
+  mutate(new = map(result, ~ fromJSON(.)%>% as.data.frame())) %>%
   unnest(new)
 # 
 # events <-
@@ -29,13 +37,16 @@ events <-
 
 events$version_num = NA
 processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
+
 processed = processed[order(processed$min_stamp),]
+
 dict = c(1:nrow(processed))
 names(dict) = processed$activityCid
+print(dict)
 
 for(i in (1:(nrow(events)))){
   working_id = events[[i,4]]
-  events[[i,24]] = dict[working_id]
+  events[[i,ncol(events)]] = dict[working_id]
 }
 
 return(events)
@@ -55,4 +66,11 @@ summarize_events <- function(data) {
     mutate(avg = mean(score))%>% 
     ungroup()
   return(out)
+}
+
+pull_dates <- function(events){
+  out <- events%>%select(timestamp)
+  out <- anytime(out$timestamp)
+  return(out)
+  
 }
