@@ -91,6 +91,9 @@ shinyServer(function(input, output) {
 
     
   dates <- reactive(pull_dates(events()))
+  versions <- reactive(pull_versions(events()))
+  
+  output$version_slider = renderUI({ selectInput("version", "Version: ", c(1:versions()))})
   
   output$date_slider = renderUI({sliderInput("date_range", "Data from: ", 
                                              min = min(dates()), 
@@ -162,7 +165,7 @@ shinyServer(function(input, output) {
   
     # Takes our events and cleans them up and adds some helpful columns
     # See file functions.R for more information.
-    cleaned <- reactive({
+    version_cleaned <- reactive({
 
       clean_events(events(),input$date_range[1],input$date_range[2])
 
@@ -177,13 +180,15 @@ shinyServer(function(input, output) {
     renderUI({
       sliderInput(
         "maxtime",
-        "Maximum time shown:",
         min = 0,
+        "Maximum time shown:",
         max = input$maxtime_set,
         value =  c(500, 10000)
       )
 
     })
+    
+    summary_data <- reactive({summarize_events(version_cleaned())})
     
     # This renders the summary data in a table
     output$summary <- renderDataTable(summary_data())
@@ -288,38 +293,23 @@ shinyServer(function(input, output) {
     summarize_events(cleaned())
   })
     
-  #This is a plot that shows time to credit for each problem
-  output$time_plot <- renderPlot({
-    cleaned() %>%
-      filter(!is.na(itemCreditAchieved)) %>%
-      ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_step() +
-      theme(legend.position = "none") +
-      facet_wrap( ~ pageNumber) +
-      labs(x = "Time", y = "Total Credit on Page") +
-      xlim(input$maxtime[1], input$maxtime[2])
-  })
-  
-  output$time_plot_s <- renderPlot({
-    cleaned() %>%
-      filter(!is.na(itemCreditAchieved)) %>%
-      ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_step() +
-      theme(legend.position = "none") +
-      facet_wrap( ~ pageNumber) +
-      labs(x = "Time", y = "Total Credit on Page") +
-      xlim(0, input$maxtime[2])
-  })
-
-
-      
-       #From here down is the code that renders the plots for the version
+    #From here down is wrong answer code
+    output$wrong_plot <- renderPlot({
+      summary_data() %>% 
+        group_by(problem) %>% 
+        filter(creditAchieved < 1) %>% 
+        ggplot(aes(x = as.factor(response), y = n,fill = as.factor(response))) + 
+        geom_col()+facet_wrap(~problem)
+    })
+    
+    
+    #From here down is the code that renders the plots for the version
     #comparison tab
     
     #This one just does a bar graph of average score for each question
     output$problem_avgs_version <- renderPlot({
 
-      summary_data() %>% 
+      version_summary_data() %>% 
       group_by(version_num) %>%
       #arrange(avg) %>%
       ggplot(aes(x = problem, y = avg,fill = as.factor(version_num))) +
@@ -331,7 +321,7 @@ shinyServer(function(input, output) {
     })
     #This is time plots faceted by version
     output$time_plot_version <- renderPlot({
-      cleaned() %>%
+      version_cleaned() %>%
         filter(!is.na(itemCreditAchieved)) %>% 
         group_by(version_num) %>%
         ggplot(aes(y = itemCreditAchieved, x = time, color=userId))+
@@ -343,7 +333,7 @@ shinyServer(function(input, output) {
     })
     #Timeplot from start, again, faceted by version
     output$time_plot_s_version <- renderPlot({
-      cleaned() %>%
+      version_cleaned() %>%
         group_by(version_num) %>% 
         filter(!is.na(itemCreditAchieved)) %>% 
         ggplot(aes(y = itemCreditAchieved, x =time, color=userId))+
@@ -356,7 +346,7 @@ shinyServer(function(input, output) {
     #histogram of total scores faceted by version
     #bins = nrow(distinct(summary_data() , score))
     output$hist_total_version <- renderPlot(
-      summary_data() %>%
+      version_summary_data() %>%
         group_by(userId,version_num) %>%
         summarize(total = sum(score)) %>%
         ggplot(aes(x = total)) +

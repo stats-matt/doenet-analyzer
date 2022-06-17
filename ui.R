@@ -32,7 +32,8 @@ shinyUI(fluidPage(
       #slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),
       uiOutput("slider"),
-      uiOutput("date_slider")
+      uiOutput("date_slider"),
+      uiOutput("version_slider")
     ),
     mainPanel(
       tabsetPanel(
@@ -52,6 +53,8 @@ shinyUI(fluidPage(
         tabPanel("Summary Data", dataTableOutput("summary")),
         tabPanel("Raw Data", dataTableOutput("raw")),
         tabPanel("Cleaned Data", dataTableOutput("cleaned_data")),
+        tabPanel("Wrong Answers", plotOutput("wrong_plot")),
+
         tabPanel("Version Comparison", tabsetPanel(type = "tabs",
                                                    tabPanel("Problem Averages", plotOutput("problem_avgs_version")),
                                                    tabPanel("Time Plots by version", plotOutput("time_plot_version")),
