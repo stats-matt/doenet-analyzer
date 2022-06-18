@@ -88,7 +88,20 @@ shinyServer(function(input, output) {
         output$id5 = NULL
       }
     })
+
+    
+  dates <- reactive(pull_dates(events()))
   
+  output$date_slider = renderUI({sliderInput("date_range", "Data from: ", 
+                                             min = min(dates()), 
+                                             max = max(dates()), 
+                                             value = c(
+                                                       min(dates()),
+                                                       max(dates())
+                                                      )
+                                             )
+                              })
+
   #link = "https://www.doenet.org/api/getEventData.php?doenetId[]=_YImZRcgrUqyNBLHd0tbP2"
   
   df <- eventReactive(input$submit_extra | input$update, {
@@ -147,11 +160,15 @@ shinyServer(function(input, output) {
     df()$events[[1]]
   })
   
-  # Takes our events and cleans them up and adds some helpful columns
-  # See file functions.R for more information.
-  cleaned <- reactive({
-    clean_events(events())
-  })
+    # Takes our events and cleans them up and adds some helpful columns
+    # See file functions.R for more information.
+    cleaned <- reactive({
+
+      clean_events(events(),input$date_range[1],input$date_range[2])
+
+      
+    })
+
   
   #slider of the time for the graph
   #max could be the total allowed time for the assignment if there is a way to
@@ -165,6 +182,7 @@ shinyServer(function(input, output) {
         max = input$maxtime_set,
         value =  c(500, 10000)
       )
+
     })
     
     # This renders the summary data in a table
@@ -184,19 +202,30 @@ shinyServer(function(input, output) {
     
     #This displays a series of histograms for scores on each problem on each page
     output$hist_prob <- renderPlot(
+      #bins = nrow(distinct(summary_data() , score))
       summary_data() %>%
         ggplot(aes(x = score)) +
-        geom_histogram() +
+        geom_histogram( ) +
         facet_grid(pageNumber ~ problem) +
         labs(x = "Score on Problem", y = "Count", title = "Breakdown by Problem")
     )
     #This displays a histogram of overall scores on the activity
+    #bins = nrow(distinct())
     output$hist_total <- renderPlot(
       summary_data() %>%
         group_by(userId) %>%
-        summarize(total = sum(score)) %>%
+        mutate(total = sum(score)) %>%
         ggplot(aes(x = total)) +
-        geom_histogram() +
+        geom_histogram() + #THIS DOESNT WORK
+        
+        #Our problem is this - I need to know the number of distinct totals
+        #I can't do this directly from summary_data because its not in the summary
+        # I can mutate it in but that is gonna slow things down and involves 
+        # moving more data than we want to through this pipe
+        # One way we could do it is get summary data to include a totals column
+        # That way we have access to it from here
+        # Broader conversation -> How do we feel about encapsulation.
+        
         labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
     )
     
@@ -209,6 +238,7 @@ shinyServer(function(input, output) {
         labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question")
     })
     
+
   # creates a table of cleaned data
   output$cleaned_data <- renderDataTable(cleaned())
   
@@ -280,19 +310,60 @@ shinyServer(function(input, output) {
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(0, input$maxtime[2])
   })
-  output$version_version <- renderPlot({
-    summary_data() %>%
+
+
+      
+       #From here down is the code that renders the plots for the version
+    #comparison tab
+    
+    #This one just does a bar graph of average score for each question
+    output$problem_avgs_version <- renderPlot({
+
+      summary_data() %>% 
       group_by(version_num) %>%
       #arrange(avg) %>%
-      ggplot(aes(
-        x = problem,
-        y = avg,
-        fill = as.factor(version_num)
-      )) +
-      geom_col(stat = "identity", position = 'dodge') +
-      labs(x = "problem", y = "average score", title = "average score by problem by version") +
-      guides(fill = guide_legend(title = "Version")) +
-      ylim(c(0, 1))
-  })
-  
+      ggplot(aes(x = problem, y = avg,fill = as.factor(version_num))) +
+      geom_col( stat = "identity", position = 'dodge') +
+      labs(x = "problem", y = "average score", title = "average score by problem by version")+
+        guides(fill=guide_legend(title="Version")) +
+      ylim(c(0,1))
+      
+    })
+    #This is time plots faceted by version
+    output$time_plot_version <- renderPlot({
+      cleaned() %>%
+        filter(!is.na(itemCreditAchieved)) %>% 
+        group_by(version_num) %>%
+        ggplot(aes(y = itemCreditAchieved, x = time, color=userId))+
+        geom_line()+
+        theme(legend.position = "none")+
+        facet_grid(version_num~pageNumber)+
+        labs(x = "Time", y = "Total Credit on Page")+
+        xlim(input$maxtime[1],input$maxtime[2])
+    })
+    #Timeplot from start, again, faceted by version
+    output$time_plot_s_version <- renderPlot({
+      cleaned() %>%
+        group_by(version_num) %>% 
+        filter(!is.na(itemCreditAchieved)) %>% 
+        ggplot(aes(y = itemCreditAchieved, x =time, color=userId))+
+        geom_line()+
+        theme(legend.position = "none")+
+        facet_grid(version_num~pageNumber)+
+        labs(x = "Time", y = "Total Credit on Page")+
+        xlim(0,input$maxtime[2])
+    })
+    #histogram of total scores faceted by version
+    #bins = nrow(distinct(summary_data() , score))
+    output$hist_total_version <- renderPlot(
+      summary_data() %>%
+        group_by(userId,version_num) %>%
+        summarize(total = sum(score)) %>%
+        ggplot(aes(x = total)) +
+        geom_histogram() +
+        labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
+      +facet_wrap(~version_num) 
+                                                      
+    )
+      
 })
