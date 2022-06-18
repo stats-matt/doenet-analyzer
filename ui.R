@@ -37,9 +37,17 @@ shinyUI(fluidPage(
     mainPanel(
       tabsetPanel(
         type = "tabs",
-        
         tabPanel("Histogram by Problem", plotOutput("hist_prob")),
-        tabPanel("Submissions by Problem", plotOutput("hist_submissions")),
+        tabPanel("Submissions by Problem",
+                 tabsetPanel(
+                   tabPanel("Submissions Per Problem",
+                            fluidRow(
+                              column(12, plotOutput("hist_submissions")),
+                              textInput("subm_q", "Input the Name of a Question for Specific Data"),
+                              column(12, plotOutput("q_submissions"))
+                            )
+                   ),
+                   tabPanel("Submissions vs Attempts",plotOutput("hist_subm_attempt")))),
         tabPanel("Histogram of Total Scores", plotOutput("hist_total")),
         tabPanel("Time Plot", plotOutput("time_plot")),
         tabPanel("Time Plot from start", plotOutput("time_plot_s")),

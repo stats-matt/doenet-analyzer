@@ -235,9 +235,32 @@ shinyServer(function(input, output) {
       totals <- table(submitted_data()$componentName)/n_distinct(events()$userId, na.rm = TRUE)
       ggplot(as.data.frame(totals), aes(x=Var1, y=Freq)) +
         geom_bar(stat="identity") +
-        labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question")
+        labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question (All Attempts)")
     })
     
+
+    #This displays a plot of the submission percentiles for a specific question
+    output$q_submissions <- renderPlot({
+      q_data <- function(){cleaned()[cleaned()$verb=="submitted" &
+                                     cleaned()$componentName==input$subm_q,]}
+      n_subm_by_id <- table(q_data()$userId) %>% as.data.frame()
+      ggplot(n_subm_by_id, aes(x=Freq)) +
+        geom_bar(stat="count") +
+        labs(x="Number of Submissions", y="Number of Students", title = "Distribution of Submissions")
+    })
+    
+    #This displays a plot of how the submissions are distributed across attempts
+    output$hist_subm_attempt <- renderPlot({
+      submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
+      ggplot(submitted_data(), aes(x=componentName)) +
+        geom_bar(aes(fill=attemptNumber)) + 
+        labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Attemtps")
+      
+    })
+    
+    
+
+
 
   # creates a table of cleaned data
   output$cleaned_data <- renderDataTable(cleaned())
