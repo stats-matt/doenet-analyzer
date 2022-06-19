@@ -44,9 +44,18 @@ shinyUI(fluidPage(
                               column(12, plotOutput("hist_submissions")),
                               textInput("subm_q", "Input the Name of a Question for Specific Data"),
                               column(12, plotOutput("q_submissions"))
-                            )
+                              )
                    ),
-                   tabPanel("Submissions vs Attempts",plotOutput("hist_subm_attempt")))),
+                   tabPanel("Submissions vs Attempts and Versions",
+                            fluidRow(
+                               selectInput("MeanVar", 
+                                          "Display statistics by cumulative submissions or average submissions per student?",
+                                          c("Cumulative" = "cm",
+                                            "Mean" = "mean")),
+                              column(12, plotOutput("hist_subm_attempt")),
+                              column(12, plotOutput("hist_subm_version"))
+                            )
+                   ))),
         tabPanel("Histogram of Total Scores", plotOutput("hist_total")),
         tabPanel("Time Plot", plotOutput("time_plot")),
         tabPanel("Time Plot from start", plotOutput("time_plot_s")),

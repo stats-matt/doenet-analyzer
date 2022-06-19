@@ -222,9 +222,46 @@ shinyServer(function(input, output) {
     #This displays a plot of how the submissions are distributed across attempts
     output$hist_subm_attempt <- renderPlot({
       submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
-      ggplot(submitted_data(), aes(x=componentName)) +
-        geom_bar(aes(fill=attemptNumber)) + 
-        labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Attemtps")
+      
+      if (input$MeanVar == "cm") {
+        ggplot(submitted_data(), aes(x=componentName, fill=attemptNumber)) +
+          geom_bar(position="dodge") + 
+          labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Attempts")
+        
+      } else {
+        totals <- table(submitted_data()$componentName, submitted_data()$attemptNumber) %>% as.data.frame.table()
+        colnames(totals) <- c("Question", "AttemptN", "Submissions")
+        for (i in 1:max(submitted_data()$attemptNumber)) {
+          subData <- function(){submitted_data()[submitted_data()$attemptNumber == i,]}
+          totals[totals$AttemptN==i,3] <- totals[totals$AttemptN==i,3]/n_distinct(subData()$userId, na.rm = TRUE)
+        }
+        ggplot(totals, aes(x=Question, y=Submissions, fill=AttemptN)) +
+          geom_bar(stat="identity", position="dodge") +
+          labs(x="Question", y="Submissions", title = "Average Number of Submissions Across Attempts")
+      }
+    })
+    
+    #This displays a plot of how the submissions are distributed across versions
+    output$hist_subm_version <- renderPlot({
+      submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
+      
+      if (input$MeanVar == "cm") {
+        ggplot(submitted_data(), aes(x=componentName, fill=as.factor(version_num))) +
+          geom_bar(position="dodge") + 
+          labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Versions") +
+          guides(fill = guide_legend(title = "VersionN"))
+        
+      } else {
+        totals <- table(submitted_data()$componentName, submitted_data()$version_num) %>% as.data.frame.table()
+        colnames(totals) <- c("Question", "VersionN", "Submissions")
+        for (i in unique(submitted_data()$version_num)) {
+          subData <- function(){submitted_data()[submitted_data()$version_num == i,]}
+          totals[totals$VersionN==i,3] <- totals[totals$VersionN==i,3]/n_distinct(subData()$userId, na.rm = TRUE)
+        }
+        ggplot(totals, aes(x=Question, y=Submissions, fill=VersionN)) +
+          geom_bar(stat="identity", position="dodge") +
+          labs(x="Question", y="Submissions", title = "Average Number of Submissions Across Versions")
+      }
       
     })
     
