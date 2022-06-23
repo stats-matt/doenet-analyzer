@@ -87,9 +87,7 @@ pull_versions <- function(events){
   
 }
 
-version_clean <- function(cleaned, input_version){
-  print(class(cleaned))
-  View(cleaned)
+version_filter <- function(cleaned, input_version){
   out <- cleaned %>% filter(cleaned$version_num == input_version)
   return(out)
 }

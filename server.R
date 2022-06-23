@@ -20,22 +20,6 @@ shinyServer(function(input, output) {
   #Third is the list that contains the event log
   #df contains this 1 by 3 frame at the end of this block
   
-  # A quick note for anyone reading this that relates to the work we are doing
-  # on being able to import multiple data sets - the website does not allow
-  # you to import the same data set twice - I tried, it doesn't work, and that
-  # is not coming from us thats coming from somewhere higher up the chain, I am
-  # guessing thats from the server? Is this something we need to look into?
-  
-  
-  # if (!is.null(renderText(getQueryString()[["data"]]))) {
-  #   df <- eventReactive(input$update, {
-  #     stream_in(file(
-  #       paste0(
-  #         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-  #         getQueryString()[["data"]]
-  #       )
-  #     ))
-  #   })
   
   #maximum 5 ids to compare/ hard coded
   #So this code is going through and adding one extra Doenet ID entry box
@@ -93,7 +77,7 @@ shinyServer(function(input, output) {
   dates <- reactive(pull_dates(events()))
   versions <- reactive(pull_versions(events()))
   
-  output$version_slider = renderUI({ selectInput("version", "Version: ", c(1:versions()))})
+  output$version_slider = renderUI({ selectInput("version_selected", "Version: ", c(1:versions()))})
   
   output$date_slider = renderUI({sliderInput("date_range", "Data from: ", 
                                              min = min(dates()), 
@@ -105,52 +89,52 @@ shinyServer(function(input, output) {
                                              )
                               })
 
-  #link = "https://www.doenet.org/api/getEventData.php?doenetId[]=_YImZRcgrUqyNBLHd0tbP2"
+  #slider of the time for the graph
+  #max could be the total allowed time for the assignment if there is a way to
+  #get.
+  output$slider <-
+    renderUI({
+      sliderInput(
+        "maxtime",
+        min = 0,
+        "Maximum time shown:",
+        max = input$maxtime_set,
+        value =  c(500, 10000)
+      )
+      
+    })
   
   df <- eventReactive(input$submit_extra | input$update, {
-    #if (input$submit_extra != 0) {
-      #TRYING to check each ids, right now not working
-      # link = paste0(link,"&doenetId[]=", input$id1)
-      # if (input$id2 != "" | NULL){
-      #   link = paste0(link, "&doenetId[]=",input$id2)
-      # }
-      # if (input$id3 != "" | NULL){
-      #   link = paste0(link, "&doenetId[]=",input$id3)
-      # }
-      # if (input$id4 != "" | NULL){
-      #   link = paste0(link, "&doenetId[]=",input$id4)
-      # }
-      # if (input$id5 != ""| NULL){
-      #   link = paste0(link, "&doenetId[]=",input$id5)
-    #   end_of_link = paste0(
-    #     "&doenetId[]=",
-    #     input$id1,
-    #     "&doenetId[]=",
-    #     input$id2,
-    #     "&doenetId[]=",
-    #     input$id3,
-    #     "&doenetId[]=",
-    #     input$id4,
-    #     "&doenetId[]=",
-    #     input$id5
-    #   )
-    #   
-    # }
-    # else{
-    #   end_of_link = ""
-    # }
+    if (input$submit_extra != 0) {
+      
+      end_of_link = paste0(
+        "&doenetId[]=",
+        input$id1,
+        "&doenetId[]=",
+        input$id2,
+        "&doenetId[]=",
+        input$id3,
+        "&doenetId[]=",
+        input$id4,
+        "&doenetId[]=",
+        input$id5
+      )
+
+    }
+    else{
+      end_of_link = ""
+    }
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
         #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
-        getQueryString()[["data"]]
-        #end_of_link
+        getQueryString()[["data"]],
+        end_of_link
       )
     ))
   })
   
-  #INSERT THIS FOR WEB VERSION
-  #getQueryString()[["data"]],
+
   
   #This block pulls out the events log, which is a dataframe, within a
   # 1 element list within a 1 by 3 dataframe. So df is the frame,
@@ -165,32 +149,26 @@ shinyServer(function(input, output) {
   
     # Takes our events and cleans them up and adds some helpful columns
     # See file functions.R for more information.
-    version_cleaned <- reactive({
+  
+  
+    cleaned_version <- reactive({
 
       clean_events(events(),input$date_range[1],input$date_range[2])
 
       
     })
-
-  
-  #slider of the time for the graph
-  #max could be the total allowed time for the assignment if there is a way to
-  #get.
-  output$slider <-
-    renderUI({
-      sliderInput(
-        "maxtime",
-        min = 0,
-        "Maximum time shown:",
-        max = input$maxtime_set,
-        value =  c(500, 10000)
-      )
-
-    })
     
-    summary_data <- reactive({summarize_events(version_cleaned())})
+
+
+    
+    summary_data_version <- reactive({summarize_events(cleaned_version())})
     
     # This renders the summary data in a table
+    
+    
+    cleaned = reactive({version_filter(cleaned_version(), input$version_selected)})
+    
+    summary_data = reactive({summarize_events(cleaned())})
     output$summary <- renderDataTable(summary_data())
     
     
@@ -204,6 +182,29 @@ shinyServer(function(input, output) {
         write.csv(events(), file)
       }
     )
+    
+    #This is a plot that shows time to credit for each problem
+    output$time_plot <- renderPlot({
+      cleaned() %>%
+        filter(!is.na(itemCreditAchieved)) %>% 
+        ggplot(aes(y = itemCreditAchieved, x = time, color=userId))+
+        geom_line()+
+        theme(legend.position = "none")+
+        facet_wrap(~pageNumber)+
+        labs(x = "Time", y = "Total Credit on Page")+
+        xlim(input$maxtime[1],input$maxtime[2])
+    })
+    
+    output$time_plot_s <- renderPlot({
+    cleaned() %>%
+        filter(!is.na(itemCreditAchieved)) %>% 
+        ggplot(aes(y = itemCreditAchieved, x =time, color=userId))+
+        geom_line()+
+        theme(legend.position = "none")+
+        facet_wrap(~pageNumber)+
+        labs(x = "Time", y = "Total Credit on Page")+
+        xlim(0,input$maxtime[2])
+    })
     
     #This displays a series of histograms for scores on each problem on each page
     output$hist_prob <- renderPlot(
@@ -245,10 +246,12 @@ shinyServer(function(input, output) {
     
 
   # creates a table of cleaned data
-  output$cleaned_data <- renderDataTable(cleaned())
+  output$cleaned_data_w_versions <- renderDataTable(cleaned_version())
   
   # creates a table of raw data
   output$raw <- renderDataTable(events())
+  
+  output$cleaned_wo_versions <- renderDataTable(cleaned())
   
   #creates an output text detailing how many students in the data set
   output$num_students <-
@@ -257,6 +260,8 @@ shinyServer(function(input, output) {
       n_distinct(events()$userId, na.rm = TRUE),
       " student(s)"
     ))
+  
+  output$num_versions <- renderText(paste0("There are ",versions() ))
   
   #creates an output text detailing how many different doenet experiments
   #are represented in this set.
@@ -270,7 +275,7 @@ shinyServer(function(input, output) {
   output$num_pages <-
     renderText(paste0(
       "There is/are ",
-      n_distinct(summary_data()$pageNumber, na.rm = TRUE),
+      n_distinct(summary_data_version()$pageNumber, na.rm = TRUE),
       " page(s)"
     ))
   
@@ -289,9 +294,6 @@ shinyServer(function(input, output) {
   # as I know this persists across function calls, so it is crucial that we
   # ungroup!
   
-  summary_data <- reactive({
-    summarize_events(cleaned())
-  })
     
     #From here down is wrong answer code
     output$wrong_plot <- renderPlot({
@@ -309,7 +311,7 @@ shinyServer(function(input, output) {
     #This one just does a bar graph of average score for each question
     output$problem_avgs_version <- renderPlot({
 
-      version_summary_data() %>% 
+      summary_data_version() %>% 
       group_by(version_num) %>%
       #arrange(avg) %>%
       ggplot(aes(x = problem, y = avg,fill = as.factor(version_num))) +
@@ -321,7 +323,7 @@ shinyServer(function(input, output) {
     })
     #This is time plots faceted by version
     output$time_plot_version <- renderPlot({
-      version_cleaned() %>%
+      cleaned_version() %>%
         filter(!is.na(itemCreditAchieved)) %>% 
         group_by(version_num) %>%
         ggplot(aes(y = itemCreditAchieved, x = time, color=userId))+
@@ -333,7 +335,7 @@ shinyServer(function(input, output) {
     })
     #Timeplot from start, again, faceted by version
     output$time_plot_s_version <- renderPlot({
-      version_cleaned() %>%
+      cleaned_version() %>%
         group_by(version_num) %>% 
         filter(!is.na(itemCreditAchieved)) %>% 
         ggplot(aes(y = itemCreditAchieved, x =time, color=userId))+
@@ -346,7 +348,7 @@ shinyServer(function(input, output) {
     #histogram of total scores faceted by version
     #bins = nrow(distinct(summary_data() , score))
     output$hist_total_version <- renderPlot(
-      version_summary_data() %>%
+      summary_data_version() %>%
         group_by(userId,version_num) %>%
         summarize(total = sum(score)) %>%
         ggplot(aes(x = total)) +
