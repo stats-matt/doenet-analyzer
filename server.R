@@ -106,7 +106,19 @@ shinyServer(function(input, output) {
   
   df <- eventReactive(input$submit_extra | input$update, {
     if (input$submit_extra != 0) {
-      
+  #   #TRYING to check each ids, right now not working
+  #   link = paste0(link,"&doenetId[]=", input$id1)
+  #   if (input$id2 != "" | NULL){
+  #     link = paste0(link, "&doenetId[]=",input$id2)
+  #   }
+  #   if (input$id3 != "" | NULL){
+  #     link = paste0(link, "&doenetId[]=",input$id3)
+  #   }
+  #   if (input$id4 != "" | NULL){
+  #     link = paste0(link, "&doenetId[]=",input$id4)
+  #   }
+  #   if (input$id5 != ""| NULL){
+  #     link = paste0(link, "&doenetId[]=",input$id5)
       end_of_link = paste0(
         "&doenetId[]=",
         input$id1,
