@@ -31,9 +31,9 @@ shinyUI(fluidPage(
       actionButton("submit_extra", "Submit"),
       #slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),
-      uiOutput("slider"),
+      uiOutput("time_slider"),
       uiOutput("date_slider"),
-      uiOutput("version_slider")
+      uiOutput("version_select")
     ),
     mainPanel(
       tabsetPanel(
@@ -42,13 +42,11 @@ shinyUI(fluidPage(
         tabPanel("Histogram by Problem", plotOutput("hist_prob")),
         tabPanel("Submissions by Problem", plotOutput("hist_submissions")),
         tabPanel("Histogram of Total Scores", plotOutput("hist_total")),
-        tabPanel("Time Plot", plotOutput("time_plot"),  
-                 
-                 ),
-        tabPanel("Time Plot from start", plotOutput("time_plot_s"),
+        tabPanel("Time Plot", plotOutput("time_plot")),  
+        tabPanel("Time Plot from start", plotOutput("time_plot_s")),
                  # numericInput("maxtime_set", "Slider maximum time:", 80000),
                  # uiOutput("slider")
-                 ),
+                 #),
         tabPanel(
           "Brief Summary",
           textOutput("num_students"),
@@ -57,23 +55,22 @@ shinyUI(fluidPage(
           textOutput("num_versions")
         ),
         tabPanel("Summary Data", dataTableOutput("summary")),
-        tabPanel("cleaned_no_versions", dataTableOutput("cleaned_wo_versions")),
         tabPanel("Raw Data", dataTableOutput("raw")),
         tabPanel("Cleaned Data", dataTableOutput("cleaned_data_w_versions")),
         tabPanel("Wrong Answers", plotOutput("wrong_plot")),
 
         tabPanel("Version Comparison", tabsetPanel(type = "tabs",
                                                    tabPanel("Problem Averages", plotOutput("problem_avgs_version")),
-                                                   tabPanel("Time Plots by version", plotOutput("time_plot_version"),
+                                                   tabPanel("Time Plots by version", plotOutput("time_plot_version")),
                                                             # numericInput("maxtime_set", "Slider maximum time:", 80000),
                                                             # uiOutput("slider")
-                                                            ),
-                                                   tabPanel("Time Plots from start by version", plotOutput("time_plot_s_version"),
+                                                            #),
+                                                   tabPanel("Time Plots from start by version", plotOutput("time_plot_s_version")),
                                                             # numericInput("maxtime_set", "Slider maximum time:", 80000),
                                                             # uiOutput("slider")
-                                                            ),
+                                                            #),
                                                    tabPanel("Histogram of total scores by version", plotOutput("hist_total_version"))
-                                                            )
+                                                            
                                                    
                  
         )
@@ -81,4 +78,4 @@ shinyUI(fluidPage(
       )
     )
   )
-))
+)))
