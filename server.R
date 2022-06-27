@@ -7,7 +7,6 @@ library(dplyr)
 shinyServer(function(input, output) {
 source("./functions.R")
 
-
 #==========PRE CLEANING INPUTS==================================================
 
 #maximum 5 ids to compare/ hard coded
@@ -137,7 +136,6 @@ df <- eventReactive(input$submit_extra | input$update, {
     )
   ))
 })
-
 
 #=================================PROCESSING DATA===============================
 #This block pulls out the events log, which is a dataframe, within a
@@ -283,6 +281,25 @@ output$hist_submissions <- renderPlot({
     labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question")
 })
 
+#This displays a plot of the submission percentiles for a specific question
+output$q_submissions <- renderPlot({
+  q_data <- function(){cleaned()[cleaned()$verb=="submitted" &
+                                 cleaned()$componentName==input$subm_q,]}
+  n_subm_by_id <- table(q_data()$userId) %>% as.data.frame()
+  ggplot(n_subm_by_id, aes(x=Freq)) +
+    geom_bar(stat="count") +
+    labs(x="Number of Submissions", y="Number of Students", title = "Distribution of Submissions")
+})
+
+#This displays a plot of how the submissions are distributed across attempts
+output$hist_subm_attempt <- renderPlot({
+  submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
+  ggplot(submitted_data(), aes(x=componentName)) +
+    geom_bar(aes(fill=attemptNumber)) + 
+    labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Attemtps")
+
+})
+   
 #====================WRONG ANSWER BASED PLOTS===================================
 #From here down is wrong answer code
 output$wrong_plot <- renderPlot({
