@@ -39,13 +39,7 @@ shinyUI(fluidPage(
         tabPanel("Histogram by Problem", plotOutput("hist_prob")),
         tabPanel("Submissions by Problem",
                  tabsetPanel(
-                   tabPanel("Submissions Per Problem",
-                            fluidRow(
-                              column(12, plotOutput("hist_submissions")),
-                              textInput("subm_q", "Input the Name of a Question for Specific Data"),
-                              column(12, plotOutput("q_submissions"))
-                              )
-                   ),
+                   tabPanel("Submissions Per Problem",plotOutput("hist_submissions")),
                    tabPanel("Submissions vs Attempts and Versions",
                             fluidRow(
                                selectInput("MeanVar", 
@@ -57,6 +51,13 @@ shinyUI(fluidPage(
                             )
                    ))),
         tabPanel("Histogram of Total Scores", plotOutput("hist_total")),
+        tabPanel("Question-Specific Data",                             
+                 fluidRow(
+                    textInput("subm_q", "Input the Name of a Question for Specific Data"),
+                    column(12, plotOutput("q_submissions")),
+                    column(12, plotOutput("q_pie")),
+                    column(12, plotOutput("score_dot"))
+        )),
         tabPanel("Time Plot", plotOutput("time_plot")),
         tabPanel("Time Plot from start", plotOutput("time_plot_s")),
         tabPanel(

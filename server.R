@@ -3,6 +3,7 @@ library(tidyverse)
 library(jsonlite)
 library(anytime)
 library(dplyr)
+library(scales)
 
 shinyServer(function(input, output) {
   source("./functions.R")
@@ -203,9 +204,10 @@ shinyServer(function(input, output) {
     #This displays a plot of average submissions per question    
     output$hist_submissions <- renderPlot({
       submitted_data <- function(){cleaned()[cleaned()$verb=="submitted",]}
-      totals <- table(submitted_data()$componentName)/n_distinct(events()$userId, na.rm = TRUE)
-      ggplot(as.data.frame(totals), aes(x=Var1, y=Freq)) +
+      totals <- as.data.frame.table(table(submitted_data()$componentName)/n_distinct(events()$userId, na.rm = TRUE))
+      ggplot(totals, aes(x=Var1, y=Freq)) +
         geom_bar(stat="identity") +
+        scale_y_continuous(breaks = pretty_breaks()) +
         labs(x="Question", y="Submissions", title = "Average Number of Submissions per Question (All Attempts)")
     })
     
@@ -216,8 +218,41 @@ shinyServer(function(input, output) {
       n_subm_by_id <- table(q_data()$userId) %>% as.data.frame()
       ggplot(n_subm_by_id, aes(x=Freq)) +
         geom_bar(stat="count") +
+        scale_y_continuous(breaks = pretty_breaks()) +
         labs(x="Number of Submissions", y="Number of Students", title = "Distribution of Submissions")
     })
+    
+    #This displays a pie chart of how many students submitted, solved, and did not attempt a problem
+    output$q_pie <- renderPlot({
+      q_data <- function(){cleaned()[cleaned()$verb=="submitted" &
+                                     cleaned()$componentName==input$subm_q,]}
+      subm_by_id <- table(q_data()$userId, q_data()$creditAchieved) %>% as.data.frame()
+      solv <- nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0,])
+      sub <- n_distinct(subm_by_id$Var1) - solv
+      not_att <- n_distinct(events()$userId, na.rm = TRUE) - solv - sub
+      results <- data.frame(Legend=c("solved","unsolved","not attempted"),num=c(solv,sub,not_att))
+      ggplot(results, aes(x="", y=num, fill=Legend)) +
+        geom_bar(stat="identity", width=1) +
+        coord_polar("y", start=0) +
+        labs(x="",y="", title="Number of Students Solving This Question")
+    })
+    
+    #This displays a dot plot of student scores vs number of attempts on a question
+    output$score_dot <- renderPlot({
+      q_data <- function(){cleaned()[cleaned()$verb=="submitted" &
+                                       cleaned()$componentName==input$subm_q,]}
+      subm_by_id <- table(q_data()$userId) %>% as.data.frame()
+      for (i in 1:nrow(subm_by_id)){
+        id <- subm_by_id[i,1]
+        max_score <- max((q_data()[q_data()$userId==id,])$creditAchieved)
+        subm_by_id[i,3] <- max_score
+      }
+      colnames(subm_by_id) = c("id", "submissions", "score")
+      ggplot(subm_by_id, aes(x=as.factor(submissions), y=score)) + 
+        geom_dotplot(binaxis='y', stackdir='center') +
+        labs(x="Number of Submissions",y="Highest Score", title="Number of Student Submissions vs Score")
+    })
+    
     
     #This displays a plot of how the submissions are distributed across attempts
     output$hist_subm_attempt <- renderPlot({
@@ -225,8 +260,10 @@ shinyServer(function(input, output) {
       
       if (input$MeanVar == "cm") {
         ggplot(submitted_data(), aes(x=componentName, fill=attemptNumber)) +
-          geom_bar(position="dodge") + 
-          labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Attempts")
+          geom_bar(position="dodge") +
+          scale_y_continuous(breaks = pretty_breaks()) +
+          labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Attempts")  +
+          guides(fill = guide_legend(title = "Attempt Number"))
         
       } else {
         totals <- table(submitted_data()$componentName, submitted_data()$attemptNumber) %>% as.data.frame.table()
@@ -237,7 +274,9 @@ shinyServer(function(input, output) {
         }
         ggplot(totals, aes(x=Question, y=Submissions, fill=AttemptN)) +
           geom_bar(stat="identity", position="dodge") +
-          labs(x="Question", y="Submissions", title = "Average Number of Submissions Across Attempts")
+          scale_y_continuous(breaks = pretty_breaks()) +
+          labs(x="Question", y="Submissions", title = "Average Number of Submissions Across Attempts") +
+          guides(fill = guide_legend(title = "Attempt Number"))
       }
     })
     
@@ -248,8 +287,9 @@ shinyServer(function(input, output) {
       if (input$MeanVar == "cm") {
         ggplot(submitted_data(), aes(x=componentName, fill=as.factor(version_num))) +
           geom_bar(position="dodge") + 
+          scale_y_continuous(breaks = pretty_breaks()) +
           labs(x="Question", y="Number of Submissions", title="Number of Submissions Across Versions") +
-          guides(fill = guide_legend(title = "VersionN"))
+          guides(fill = guide_legend(title = "Version Number"))
         
       } else {
         totals <- table(submitted_data()$componentName, submitted_data()$version_num) %>% as.data.frame.table()
@@ -260,7 +300,9 @@ shinyServer(function(input, output) {
         }
         ggplot(totals, aes(x=Question, y=Submissions, fill=VersionN)) +
           geom_bar(stat="identity", position="dodge") +
-          labs(x="Question", y="Submissions", title = "Average Number of Submissions Across Versions")
+          scale_y_continuous(breaks = pretty_breaks()) +
+          labs(x="Question", y="Submissions", title = "Average Number of Submissions Across Versions") +
+          guides(fill = guide_legend(title = "Version Number"))
       }
       
     })
