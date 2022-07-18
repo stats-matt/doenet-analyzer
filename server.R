@@ -131,7 +131,7 @@ shinyServer(function(input, output) {
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
         "_YImZRcgrUqyNBLHd0tbP2", # for debugging to have a set doenetid to use
-        #getQueryString()[["data"]],
+        # getQueryString()[["data"]],
         end_of_link
       )
     ))
@@ -261,9 +261,10 @@ shinyServer(function(input, output) {
   output$hist_prob <- renderPlot(
     # bins = nrow(distinct(summary_data() , score))
     summary_data() %>%
-      ggplot(aes(x = score)) +
+      filter(!is.na(itemCreditAchieved)) %>%
+      ggplot(aes(x = itemCreditAchieved)) +
       geom_histogram() +
-      facet_grid(pageNumber ~ problem) +
+      facet_grid(pageNumber ~ item) +
       labs(x = "Score on Problem", y = "Count", title = "Breakdown by Problem")
   )
   # This displays a histogram of overall scores on the activity
@@ -271,7 +272,7 @@ shinyServer(function(input, output) {
   output$hist_total <- renderPlot(
     summary_data() %>%
       group_by(userId) %>%
-      mutate(total = sum(score)) %>%
+      mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
@@ -280,17 +281,17 @@ shinyServer(function(input, output) {
   # ========================ATTEMPT BASED PLOTS====================================
   # This displays a plot of average submissions per question
   output$hist_submissions <- renderPlot({
-    submitted_data <- cleaned() %>% filter(verb=="submitted")
+    submitted_data <- cleaned() %>% filter(verb == "submitted")
     totals <- as.data.frame.table(table(submitted_data$componentName) / n_distinct(events()$userId, na.rm = TRUE))
     ggplot(totals, aes(x = Var1, y = Freq)) +
       geom_bar(stat = "identity") +
       scale_y_continuous(breaks = pretty_breaks()) +
       labs(x = "Question", y = "Submissions", title = "Average Number of Submissions per Question (All Attempts)")
   })
-  
+
   # This displays a plot of how the submissions are distributed across attempts
   output$hist_subm_attempt <- renderPlot({
-    submitted_data <- cleaned() %>% filter(verb=="submitted")
+    submitted_data <- cleaned() %>% filter(verb == "submitted")
     if (input$MeanVar == "cm") {
       ggplot(submitted_data, aes(x = componentName, fill = attemptNumber)) +
         geom_bar(position = "dodge") +
@@ -313,10 +314,10 @@ shinyServer(function(input, output) {
         guides(fill = guide_legend(title = "Attempt Number"))
     }
   })
-  
+
   # This displays a plot of how the submissions are distributed across versions
   output$hist_subm_version <- renderPlot({
-    submitted_data <- cleaned() %>% filter(verb=="submitted")
+    submitted_data <- cleaned() %>% filter(verb == "submitted")
     if (input$MeanVar == "cm") {
       ggplot(submitted_data, aes(x = componentName, fill = as.factor(version_num))) +
         geom_bar(position = "dodge") +
@@ -343,7 +344,7 @@ shinyServer(function(input, output) {
 
   # This displays a plot of the submission percentiles for a specific question
   output$q_submissions <- renderPlot({
-    q_data <- cleaned() %>% filter(verb=="submitted", componentName== input$subm_q)
+    q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
     n_subm_by_id <- table(q_data$userId) %>% as.data.frame()
     ggplot(n_subm_by_id, aes(x = Freq)) +
       geom_bar(stat = "count") +
@@ -353,7 +354,7 @@ shinyServer(function(input, output) {
 
   # This displays a pie chart of how many students submitted, solved, and did not attempt a problem
   output$q_pie <- renderPlot({
-    q_data <- cleaned() %>% filter(verb=="submitted", componentName== input$subm_q)
+    q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
     subm_by_id <- table(q_data$userId, q_data$creditAchieved) %>% as.data.frame()
     solv <- nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
     sub <- n_distinct(subm_by_id$Var1) - solv
@@ -367,7 +368,7 @@ shinyServer(function(input, output) {
 
   # This displays a dot plot of student scores vs number of attempts on a question
   output$score_dot <- renderPlot({
-    q_data <- cleaned() %>% filter(verb=="submitted", componentName== input$subm_q)
+    q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
     subm_by_id <- table(q_data$userId) %>% as.data.frame()
     for (i in 1:nrow(subm_by_id)) {
       id <- subm_by_id[i, 1]
@@ -384,11 +385,12 @@ shinyServer(function(input, output) {
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
     summary_data() %>%
-      group_by(problem) %>%
-      filter(creditAchieved < 1) %>%
+      group_by(item) %>%
+      filter(itemCreditAchieved < 1) %>%
       ggplot(aes(x = as.factor(response), y = n, fill = as.factor(response))) +
       geom_col() +
-      facet_wrap(~problem)
+      facet_wrap(~item) +
+      labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
   })
 
   # ================VERSION COMPARISON PLOTS=======================================
@@ -398,7 +400,7 @@ shinyServer(function(input, output) {
     summary_data_version() %>%
       group_by(version_num) %>%
       # arrange(avg) %>%
-      ggplot(aes(x = problem, y = avg, fill = as.factor(version_num))) +
+      ggplot(aes(x = item, y = avg, fill = as.factor(version_num))) +
       geom_col(stat = "identity", position = "dodge") +
       labs(x = "problem", y = "average score", title = "average score by problem by version") +
       # guides(fill=guide_legend(title="Version")) +
@@ -433,7 +435,7 @@ shinyServer(function(input, output) {
   output$hist_total_version <- renderPlot(
     summary_data_version() %>%
       group_by(userId, version_num) %>%
-      summarize(total = sum(score)) %>%
+      summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
