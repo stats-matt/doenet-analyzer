@@ -293,19 +293,20 @@ shinyServer(function(input, output) {
   output$hist_subm_attempt <- renderPlot({
     submitted_data <- cleaned() %>% filter(verb == "submitted")
     if (input$MeanVar == "cm") {
+      #cumulative submissions per question
       ggplot(submitted_data, aes(x = componentName, fill = attemptNumber)) +
         geom_bar(position = "dodge") +
         scale_y_continuous(breaks = pretty_breaks()) +
         labs(x = "Question", y = "Number of Submissions", title = "Number of Submissions Across Attempts") +
         guides(fill = guide_legend(title = "Attempt Number"))
     } else {
+      #average submissions per question
       totals <- table(submitted_data$componentName, submitted_data$attemptNumber) %>% as.data.frame.table()
       colnames(totals) <- c("Question", "AttemptN", "Submissions")
       for (i in 1:max(submitted_data$attemptNumber)) {
-        subData <- function() {
-          submitted_data[submitted_data$attemptNumber == i, ]
-        }
-        totals[totals$AttemptN == i, 3] <- totals[totals$AttemptN == i, 3] / n_distinct(subData()$userId, na.rm = TRUE)
+        #divide cumulative submissions by the number of students submitting in each attempt number
+        subData <- submitted_data %>% filter(attemptNumber == i)
+        totals[totals$AttemptN == i, 3] <- totals[totals$AttemptN == i, 3] / n_distinct(subData$userId, na.rm = TRUE)
       }
       ggplot(totals, aes(x = Question, y = Submissions, fill = AttemptN)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -319,19 +320,19 @@ shinyServer(function(input, output) {
   output$hist_subm_version <- renderPlot({
     submitted_data <- cleaned() %>% filter(verb == "submitted")
     if (input$MeanVar == "cm") {
+      #cumulative submissions
       ggplot(submitted_data, aes(x = componentName, fill = as.factor(version_num))) +
         geom_bar(position = "dodge") +
         scale_y_continuous(breaks = pretty_breaks()) +
         labs(x = "Question", y = "Number of Submissions", title = "Number of Submissions Across Versions") +
         guides(fill = guide_legend(title = "Version Number"))
     } else {
+      #average submissions per version
       totals <- table(submitted_data$componentName, submitted_data$version_num) %>% as.data.frame.table()
       colnames(totals) <- c("Question", "VersionN", "Submissions")
       for (i in unique(submitted_data$version_num)) {
-        subData <- function() {
-          submitted_data[submitted_data$version_num == i, ]
-        }
-        totals[totals$VersionN == i, 3] <- totals[totals$VersionN == i, 3] / n_distinct(subData()$userId, na.rm = TRUE)
+        subData <- submitted_data %>% filter(version_num == i)
+        totals[totals$VersionN == i, 3] <- totals[totals$VersionN == i, 3] / n_distinct(subData$userId, na.rm = TRUE)
       }
       ggplot(totals, aes(x = Question, y = Submissions, fill = VersionN)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -366,7 +367,7 @@ shinyServer(function(input, output) {
       labs(x = "", y = "", title = "Number of Students Solving This Question")
   })
 
-  # This displays a dot plot of student scores vs number of attempts on a question
+  # This displays a dot plot of student scores vs number of submissions on a question
   output$score_dot <- renderPlot({
     q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
     subm_by_id <- table(q_data$userId) %>% as.data.frame()
@@ -375,8 +376,7 @@ shinyServer(function(input, output) {
       max_score <- max((q_data[q_data$userId == id, ])$creditAchieved)
       subm_by_id[i, 3] <- max_score
     }
-    colnames(subm_by_id) <- c("id", "submissions", "score")
-    ggplot(subm_by_id, aes(x = as.factor(submissions), y = score)) +
+    ggplot(subm_by_id, aes(x = as.factor(Freq), y = V3)) +
       geom_dotplot(binaxis = "y", stackdir = "center") +
       labs(x = "Number of Submissions", y = "Highest Score", title = "Number of Student Submissions vs Score")
   })
