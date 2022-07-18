@@ -261,9 +261,10 @@ shinyServer(function(input, output) {
   output$hist_prob <- renderPlot(
     # bins = nrow(distinct(summary_data() , score))
     summary_data() %>%
-      ggplot(aes(x = score)) +
+      filter(!is.na(itemCreditAchieved)) %>% 
+      ggplot(aes(x = itemCreditAchieved)) +
       geom_histogram() +
-      facet_grid(pageNumber ~ problem) +
+      facet_grid(pageNumber ~ item) +
       labs(x = "Score on Problem", y = "Count", title = "Breakdown by Problem")
   )
   # This displays a histogram of overall scores on the activity
@@ -271,7 +272,7 @@ shinyServer(function(input, output) {
   output$hist_total <- renderPlot(
     summary_data() %>%
       group_by(userId) %>%
-      mutate(total = sum(score)) %>%
+      mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
@@ -295,7 +296,7 @@ shinyServer(function(input, output) {
   output$q_submissions <- renderPlot({
     q_data <- function() {
       cleaned()[cleaned()$verb == "submitted" &
-        cleaned()$componentName == input$subm_q, ]
+        cleaned()$item == input$subm_q, ]
     }
     n_subm_by_id <- table(q_data()$userId) %>% as.data.frame()
     ggplot(n_subm_by_id, aes(x = Freq)) +
@@ -308,7 +309,7 @@ shinyServer(function(input, output) {
   output$q_pie <- renderPlot({
     q_data <- function() {
       cleaned()[cleaned()$verb == "submitted" &
-        cleaned()$componentName == input$subm_q, ]
+        cleaned()$item == input$subm_q, ]
     }
     subm_by_id <- table(q_data()$userId, q_data()$creditAchieved) %>% as.data.frame()
     solv <- nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
@@ -325,12 +326,12 @@ shinyServer(function(input, output) {
   output$score_dot <- renderPlot({
     q_data <- function() {
       cleaned()[cleaned()$verb == "submitted" &
-        cleaned()$componentName == input$subm_q, ]
+        cleaned()$item == input$subm_q, ]
     }
     subm_by_id <- table(q_data()$userId) %>% as.data.frame()
     for (i in 1:nrow(subm_by_id)) {
       id <- subm_by_id[i, 1]
-      max_score <- max((q_data()[q_data()$userId == id, ])$creditAchieved)
+      max_score <- max((q_data()[q_data()$userId == id, ])$itemCreditAchieved)
       subm_by_id[i, 3] <- max_score
     }
     colnames(subm_by_id) <- c("id", "submissions", "score")
@@ -402,11 +403,12 @@ shinyServer(function(input, output) {
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
     summary_data() %>%
-      group_by(problem) %>%
-      filter(creditAchieved < 1) %>%
+      group_by(item) %>%
+      filter(itemCreditAchieved < 1) %>%
       ggplot(aes(x = as.factor(response), y = n, fill = as.factor(response))) +
       geom_col() +
-      facet_wrap(~problem)
+      facet_wrap(~item)+
+      labs(x = "Wrong Answer", y = "Frequency", fill="Wrong Answer")
   })
 
   # ================VERSION COMPARISON PLOTS=======================================
@@ -416,7 +418,7 @@ shinyServer(function(input, output) {
     summary_data_version() %>%
       group_by(version_num) %>%
       # arrange(avg) %>%
-      ggplot(aes(x = problem, y = avg, fill = as.factor(version_num))) +
+      ggplot(aes(x = item, y = avg, fill = as.factor(version_num))) +
       geom_col(stat = "identity", position = "dodge") +
       labs(x = "problem", y = "average score", title = "average score by problem by version") +
       # guides(fill=guide_legend(title="Version")) +
@@ -451,7 +453,7 @@ shinyServer(function(input, output) {
   output$hist_total_version <- renderPlot(
     summary_data_version() %>%
       group_by(userId, version_num) %>%
-      summarize(total = sum(score)) %>%
+      summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
