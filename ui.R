@@ -42,9 +42,12 @@ shinyUI(fluidPage(
         tabPanel(
           "Submissions by Problem",
           tabsetPanel(
-            tabPanel("Submissions Per Problem", plotOutput("hist_submissions")),
+            tabPanel("Submissions Per Problem", 
+                     "This graph shows the average number of submissions per question. Averages are calculated across all attempts and versions of the assignment.",
+                     plotOutput("hist_submissions")),
             tabPanel(
               "Submissions vs Attempts and Versions",
+              "This set of graphs shows the number of submissions per question, stratified by version number and attempt number. You may choose to display either cumulative submissions or average submissions per question.",
               fluidRow(
                 selectInput(
                   "MeanVar",
@@ -63,6 +66,7 @@ shinyUI(fluidPage(
         tabPanel("Histogram of Total Scores", plotOutput("hist_total")),
         tabPanel(
           "Question-Specific Data",
+          "This set of graphs shows the distribution of submissions for a specific question, as well as the distribution of how many students solved or attempted the question. At the bottom of the page is a graph displaying student scores vs number of submissions.",
           fluidRow(
             textInput("subm_q", "Input the Name of a Question for Specific Data"),
             column(12, plotOutput("q_submissions")),
