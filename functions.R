@@ -4,62 +4,106 @@
 #======================clean_events=============================================
 #This function does most of the heavy lifting of cleaning the events data
 #That consists of getting rid of events outside of date range, determining which
-#event came from which version of the activity, and unpacking columns containing 
+#event came from which version of the activity, and unpacking columns containing
 #JSON strings.
 
-clean_events <- function(events,min_date,max_date) {
-  
-#This block adds the timestamp column to the cleaned data set
+clean_events <- function(events, min_date, max_date) {
+  #This block adds the timestamp column to the cleaned data set
   events <-
     events %>%
     group_by(userId) %>%
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time = timestamp - min(timestamp)) %>%
     ungroup()
-
-
-  events <- events %>% filter(between(timestamp, min_date, max_date))
-
-
-events <-
-  events %>%
-  mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
-  unnest(new)
-events <-
-  events %>%
-  mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
-  unnest(new)
-events <- 
-  events %>% 
-  mutate(new = map(result, ~ fromJSON(.)%>% as.data.frame() %>% mutate_if(is.numeric, as.character))) %>%
-  unnest(new)
-
-#To solve the problem of multiple types in the response column we used code from
-# the following stackoverflow link:
-# https://stackoverflow.com/questions/27668266/dplyr-change-many-data-types
-
-# 
-# events <-
-#   events %>%
-#   separate(componentName, into = c(NA, "section", "answer", "type"))
-# 
-# events <-
-#   events %>%
-#   filter(!is.na(documentCreditAchieved))
-
-events$version_num = NA
-processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
-processed = processed[order(processed$min_stamp), ]
-dict = c(1:nrow(processed))
-names(dict) = processed$activityCid
-for (i in (1:(nrow(events)))) {
-  working_id = events[[i, 4]]
-  events[[i, ncol(events)]] = dict[working_id]
+  events <-
+    events %>% filter(between(timestamp, min_date, max_date))
+  events <-
+    events %>%
+    mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
+    unnest(new)
+  events <-
+    events %>%
+    mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
+    unnest(new)
+  events <-
+    events %>%
+    mutate(new = map(
+      result,
+      ~ fromJSON(.) %>% as.data.frame() %>% mutate_if(is.numeric, as.character)
+    )) %>%
+    unnest(new)
+  
+  #To solve the problem of multiple types in the response column we used code from
+  # the following stackoverflow link:
+  # https://stackoverflow.com/questions/27668266/dplyr-change-many-data-types
+  #
+  # events <-
+  #   events %>%
+  #   separate(componentName, into = c(NA, "section", "answer", "type"))
+  #
+  # events <-
+  #   events %>%
+  #   filter(!is.na(documentCreditAchieved))
+  
+  events$version_num = NA
+  processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
+  processed = processed[order(processed$min_stamp),]
+  dict = c(1:nrow(processed))
+  names(dict) = processed$activityCid
+  for (i in (1:(nrow(events)))) {
+    working_id = events[[i, 4]]
+    events[[i, ncol(events)]] = dict[working_id]
+  }
+  return(events)
 }
 
 
-return(events)
-
+clean_events_no_dates <- function(events) {
+  #This block adds the timestamp column to the cleaned data set
+  events <-
+    events %>%
+    group_by(userId) %>%
+    mutate(timestamp = anytime(timestamp)) %>%
+    mutate(time = timestamp - min(timestamp)) %>%
+    ungroup()
+  events <-
+    events %>%
+    mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
+    unnest(new)
+  events <-
+    events %>%
+    mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
+    unnest(new)
+  events <-
+    events %>%
+    mutate(new = map(
+      result,
+      ~ fromJSON(.) %>% as.data.frame() %>% mutate_if(is.numeric, as.character)
+    )) %>%
+    unnest(new)
+  
+  #To solve the problem of multiple types in the response column we used code from
+  # the following stackoverflow link:
+  # https://stackoverflow.com/questions/27668266/dplyr-change-many-data-types
+  #
+  # events <-
+  #   events %>%
+  #   separate(componentName, into = c(NA, "section", "answer", "type"))
+  #
+  # events <-
+  #   events %>%
+  #   filter(!is.na(documentCreditAchieved))
+  
+  events$version_num = NA
+  processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
+  processed = processed[order(processed$min_stamp),]
+  dict = c(1:nrow(processed))
+  names(dict) = processed$activityCid
+  for (i in (1:(nrow(events)))) {
+    working_id = events[[i, 4]]
+    events[[i, ncol(events)]] = dict[working_id]
+  }
+  return(events)
 }
 
 #=================summarize_events==============================================
@@ -74,20 +118,29 @@ return(events)
 summarize_events <- function(data) {
   out <-
     data %>%
-    # select(userId, starts_with("X"), time, timestamp, pageNumber, 
+    # select(userId, starts_with("X"), time, timestamp, pageNumber,
     #        version_num,response,creditAchieved) %>%
-    select(userId, item, time, timestamp, pageNumber, 
-           version_num,response,itemCreditAchieved, pageCreditAchieved) %>%
+    select(
+      userId,
+      item,
+      time,
+      timestamp,
+      pageNumber,
+      version_num,
+      response,
+      itemCreditAchieved,
+      pageCreditAchieved
+    ) %>%
     # group_by(userId, pageNumber, version_num) %>%
     # pivot_longer(cols = starts_with("X"),
     #              names_to = "problem",
     #              values_to = "score") %>%
     # ungroup() %>%
-    #filter(score != -Inf) %>% 
-    group_by(item,version_num) %>% 
-    mutate(avg = mean(itemCreditAchieved)) %>% 
+    #filter(score != -Inf) %>%
+    group_by(item, version_num) %>%
+    mutate(avg = mean(itemCreditAchieved)) %>%
     ungroup() %>%
-    group_by(response) %>% 
+    group_by(response) %>%
     add_count(response) %>%
     ungroup()
   

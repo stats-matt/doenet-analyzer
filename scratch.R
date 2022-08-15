@@ -9,11 +9,29 @@ library(dplyr)
 raw = stream_in(file(paste0("https://www.doenet.org/api/getEventData.php?doenetId[]=_dKAX4QFX3JGXILGwaApZY")))
 unpacked = raw$events[[1]]
 
-#cleaned = clean_events(unpacked)
-#summarized = summarize_events(cleaned)
+#_xmSpj9tMI84bWWWlp8UTm
+
+
+cleaned = clean_events_no_dates(unpacked)
+summarized = summarize_events(cleaned)
 #nrow(distinct(summarized, score))
 
 
+summarized %>%
+    select(userId, item, pageNumber, itemCreditAchieved) %>%
+    filter(!is.na(item)) %>%
+    group_by(userId, pageNumber, item) %>%
+    slice_max(itemCreditAchieved, n = 1) %>%
+    distinct() %>%
+    pivot_wider(
+      names_from = c(item, pageNumber),
+      values_from = itemCreditAchieved
+    ) %>%
+  ggradar()
+  #ggplot()
+
+cleaned <- clean_events_no_dates(unpacked)
+summarized = summarize_events(cleaned)
 
 dates = unpacked %>% select(timestamp)
 

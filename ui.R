@@ -20,7 +20,7 @@ shinyUI(fluidPage(
         step = 1
       ),
       # actionButton("gennum","next"),
-
+      
       # hard-coded ui for doenet ids
       uiOutput("rid"),
       uiOutput("id1"),
@@ -90,19 +90,30 @@ shinyUI(fluidPage(
         tabPanel("Raw Data", dataTableOutput("raw")),
         tabPanel("Cleaned Data", dataTableOutput("cleaned_data_w_versions")),
         tabPanel("Wrong Answers", plotOutput("wrong_plot")),
-        tabPanel("Version Comparison", tabsetPanel(
-          type = "tabs",
-          tabPanel("Problem Averages", plotOutput("problem_avgs_version")),
-          tabPanel("Time Plots by version", plotOutput("time_plot_version")),
-          # numericInput("maxtime_set", "Slider maximum time:", 80000),
-          # uiOutput("slider")
-          # ),
-          tabPanel("Time Plots from start by version", plotOutput("time_plot_s_version")),
-          # numericInput("maxtime_set", "Slider maximum time:", 80000),
-          # uiOutput("slider")
-          # ),
-          tabPanel("Histogram of total scores by version", plotOutput("hist_total_version"))
-        ))
+        tabPanel(
+          "Version Comparison",
+          tabsetPanel(
+            type = "tabs",
+            tabPanel("Problem Averages", plotOutput("problem_avgs_version")),
+            tabPanel("Time Plots by version", plotOutput("time_plot_version")),
+            # numericInput("maxtime_set", "Slider maximum time:", 80000),
+            # uiOutput("slider")
+            # ),
+            tabPanel(
+              "Time Plots from start by version",
+              plotOutput("time_plot_s_version")
+            ),
+            # numericInput("maxtime_set", "Slider maximum time:", 80000),
+            # uiOutput("slider")
+            # ),
+            tabPanel(
+              "Histogram of total scores by version",
+              plotOutput("hist_total_version")
+            )
+          )
+        ),
+        tabPanel("Radar graph", plotOutput("radar_graph"))
+        
       )
     )
   )
