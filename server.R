@@ -134,7 +134,9 @@ shinyServer(function(input, output) {
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        # "_YImZRcgrUqyNBLHd0tbP2", # for debugging to have a set doenetid to use
+         #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
+        #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
+        #"_PY82WGbGMv9FIVDzJdxgZ" # calc data for analysis
         getQueryString()[["data"]],
         end_of_link
       )
@@ -245,7 +247,7 @@ shinyServer(function(input, output) {
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -256,7 +258,7 @@ shinyServer(function(input, output) {
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -278,7 +280,9 @@ shinyServer(function(input, output) {
   output$hist_total <- renderPlot(
     summary_data() %>%
       group_by(userId) %>%
-      mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
+      filter(pageCreditAchieved != "-Inf") %>%
+      summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
+      #mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
@@ -426,7 +430,7 @@ shinyServer(function(input, output) {
       filter(!is.na(itemCreditAchieved)) %>%
       group_by(version_num) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_grid(version_num ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -438,7 +442,7 @@ shinyServer(function(input, output) {
       group_by(version_num) %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_grid(version_num ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +

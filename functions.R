@@ -15,8 +15,8 @@ clean_events <- function(events, min_date, max_date) {
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time = timestamp - min(timestamp)) %>%
     ungroup()
-  events <-
-    events %>% filter(between(timestamp, min_date, max_date))
+  #events <-
+  #  events %>% filter(between(timestamp, min_date, max_date))
   events <-
     events %>%
     mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
