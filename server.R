@@ -79,27 +79,7 @@ shinyServer(function(input, output) {
       )
     })
   
-  # These next two lines pull data directly from events (before it is cleaned)
-  # that is crucial to determining the date and version selection on the sidebar.
-  # As a rule we have typically tried to avoid working on events directly, but
-  # because this determines how we clean we have made an exception.
-  dates <- reactive(pull_dates(events()))
-  versions <- reactive(pull_versions(events()))
   
-  # This outputs the version selection and the date slider for the UI
-  output$version_select <- renderUI({
-    selectInput("version_selected", "Version: ", c(1:versions()))
-  })
-  output$date_slider <- renderUI({
-    sliderInput(
-      "date_range",
-      "Data from: ",
-      min = min(dates()),
-      max = max(dates()),
-      value = c(min(dates()),
-                max(dates()))
-    )
-  })
   
   # ==========================GETTING DATA=========================================
   # What this code is doing is pulling in the data
@@ -134,12 +114,19 @@ shinyServer(function(input, output) {
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        # "_YImZRcgrUqyNBLHd0tbP2", # for debugging to have a set doenetid to use
+        #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
+        #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
+        #"_PY82WGbGMv9FIVDzJdxgZ" # calc data for analysis
         getQueryString()[["data"]],
         end_of_link
       )
     ))
   })
+  
+  
+  
+  
+  
   
   # =================================PROCESSING DATA===============================
   # This block pulls out the events log, which is a dataframe, within a
@@ -187,6 +174,29 @@ shinyServer(function(input, output) {
   summary_data <- reactive({
     summarize_events(cleaned())
   })
+  
+  # These next two lines pull data directly from events (before it is cleaned)
+  # that is crucial to determining the date and version selection on the sidebar.
+  # As a rule we have typically tried to avoid working on events directly, but
+  # because this determines how we clean we have made an exception.
+  dates <- reactive(pull_dates(events()))
+  versions <- reactive(pull_versions(events()))
+  
+  # This outputs the version selection and the date slider for the UI
+  output$version_select <- renderUI({
+    selectInput("version_selected", "Version: ", c(1:versions()))
+  })
+  output$date_slider <- renderUI({
+    sliderInput(
+      "date_range",
+      "Data from: ",
+      min = min(dates()),
+      max = max(dates()),
+      value = c(min(dates()),
+                max(dates()))
+    )
+  })
+  
   
   # =========================DOWNLOADING DATA======================================
   # This gives allows the user to download the data shown in a csv file for their
@@ -245,7 +255,7 @@ shinyServer(function(input, output) {
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -256,7 +266,7 @@ shinyServer(function(input, output) {
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -278,7 +288,9 @@ shinyServer(function(input, output) {
   output$hist_total <- renderPlot(
     summary_data() %>%
       group_by(userId) %>%
-      mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
+      filter(pageCreditAchieved != "-Inf") %>%
+      summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
+      #mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
@@ -288,31 +300,36 @@ shinyServer(function(input, output) {
   # This displays a plot of average submissions per question
   output$hist_submissions <- renderPlot({
     submitted_data <- cleaned() %>% filter(verb == "submitted")
-    totals <- as.data.frame.table(table(submitted_data$componentName) / n_distinct(events()$userId, na.rm = TRUE))
+    totals <-
+      as.data.frame.table(table(submitted_data$componentName) / n_distinct(events()$userId, na.rm = TRUE))
     ggplot(totals, aes(x = Var1, y = Freq)) +
       geom_bar(stat = "identity") +
       scale_y_continuous(breaks = pretty_breaks()) +
       labs(x = "Question", y = "Submissions", title = "Average Number of Submissions per Question (All Attempts)")
   })
-
+  
   # This displays a plot of how the submissions are distributed across attempts
   output$hist_subm_attempt <- renderPlot({
     submitted_data <- cleaned() %>% filter(verb == "submitted")
     if (input$MeanVar == "cm") {
       #cumulative submissions per question
-      ggplot(submitted_data, aes(x = componentName, fill = attemptNumber)) +
+      ggplot(submitted_data,
+             aes(x = componentName, fill = attemptNumber)) +
         geom_bar(position = "dodge") +
         scale_y_continuous(breaks = pretty_breaks()) +
         labs(x = "Question", y = "Number of Submissions", title = "Number of Submissions Across Attempts") +
         guides(fill = guide_legend(title = "Attempt Number"))
     } else {
       #average submissions per question
-      totals <- table(submitted_data$componentName, submitted_data$attemptNumber) %>% as.data.frame.table()
+      totals <-
+        table(submitted_data$componentName,
+              submitted_data$attemptNumber) %>% as.data.frame.table()
       colnames(totals) <- c("Question", "AttemptN", "Submissions")
       for (i in 1:max(submitted_data$attemptNumber)) {
         #divide cumulative submissions by the number of students submitting in each attempt number
         subData <- submitted_data %>% filter(attemptNumber == i)
-        totals[totals$AttemptN == i, 3] <- totals[totals$AttemptN == i, 3] / n_distinct(subData$userId, na.rm = TRUE)
+        totals[totals$AttemptN == i, 3] <-
+          totals[totals$AttemptN == i, 3] / n_distinct(subData$userId, na.rm = TRUE)
       }
       ggplot(totals, aes(x = Question, y = Submissions, fill = AttemptN)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -334,11 +351,14 @@ shinyServer(function(input, output) {
         guides(fill = guide_legend(title = "Version Number"))
     } else {
       #average submissions per version
-      totals <- table(submitted_data$componentName, submitted_data$version_num) %>% as.data.frame.table()
+      totals <-
+        table(submitted_data$componentName,
+              submitted_data$version_num) %>% as.data.frame.table()
       colnames(totals) <- c("Question", "VersionN", "Submissions")
       for (i in unique(submitted_data$version_num)) {
         subData <- submitted_data %>% filter(version_num == i)
-        totals[totals$VersionN == i, 3] <- totals[totals$VersionN == i, 3] / n_distinct(subData$userId, na.rm = TRUE)
+        totals[totals$VersionN == i, 3] <-
+          totals[totals$VersionN == i, 3] / n_distinct(subData$userId, na.rm = TRUE)
       }
       ggplot(totals, aes(x = Question, y = Submissions, fill = VersionN)) +
         geom_bar(stat = "identity", position = "dodge") +
@@ -347,46 +367,57 @@ shinyServer(function(input, output) {
         guides(fill = guide_legend(title = "Version Number"))
     }
   })
-
+  
   # ========================QUESTION SPECIFIC PLOTS====================================
   # This displays a plot of the submission percentiles for a specific question
   output$q_submissions <- renderPlot({
-    q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
+    q_data <-
+      cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
     n_subm_by_id <- table(q_data$userId) %>% as.data.frame()
     ggplot(n_subm_by_id, aes(x = Freq)) +
       geom_bar(stat = "count") +
       scale_y_continuous(breaks = pretty_breaks()) +
       labs(x = "Number of Submissions", y = "Number of Students", title = "Distribution of Submissions")
   })
-
+  
   # This displays a pie chart of how many students submitted, solved, and did not attempt a problem
   output$q_pie <- renderPlot({
-    q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
-    subm_by_id <- table(q_data$userId, q_data$creditAchieved) %>% as.data.frame()
-    solv <- nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
+    q_data <-
+      cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
+    subm_by_id <-
+      table(q_data$userId, q_data$creditAchieved) %>% as.data.frame()
+    solv <-
+      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
     sub <- n_distinct(subm_by_id$Var1) - solv
-    not_att <- n_distinct(events()$userId, na.rm = TRUE) - solv - sub
-    results <- data.frame(Legend = c("solved", "unsolved", "not attempted"), num = c(solv, sub, not_att))
+    not_att <-
+      n_distinct(events()$userId, na.rm = TRUE) - solv - sub
+    results <-
+      data.frame(
+        Legend = c("solved", "unsolved", "not attempted"),
+        num = c(solv, sub, not_att)
+      )
     ggplot(results, aes(x = "", y = num, fill = Legend)) +
       geom_bar(stat = "identity", width = 1) +
       coord_polar("y", start = 0) +
       labs(x = "", y = "", title = "Number of Students Solving This Question")
   })
-
+  
   # This displays a dot plot of student scores vs number of submissions on a question
   output$score_dot <- renderPlot({
-    q_data <- cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
+    q_data <-
+      cleaned() %>% filter(verb == "submitted", componentName == input$subm_q)
     subm_by_id <- table(q_data$userId) %>% as.data.frame()
     for (i in 1:nrow(subm_by_id)) {
       id <- subm_by_id[i, 1]
-      max_score <- max((q_data[q_data$userId == id, ])$creditAchieved)
+      max_score <-
+        max((q_data[q_data$userId == id, ])$creditAchieved)
       subm_by_id[i, 3] <- max_score
     }
     ggplot(subm_by_id, aes(x = as.factor(Freq), y = V3)) +
       geom_dotplot(binaxis = "y", stackdir = "center") +
       labs(x = "Number of Submissions", y = "Highest Score", title = "Number of Student Submissions vs Score")
   })
-
+  
   # ====================WRONG ANSWER BASED PLOTS===================================
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
@@ -399,7 +430,7 @@ shinyServer(function(input, output) {
         fill = as.factor(response)
       )) +
       geom_col() +
-      facet_wrap(~item) +
+      facet_wrap(~ item) +
       labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
   })
   
@@ -426,7 +457,7 @@ shinyServer(function(input, output) {
       filter(!is.na(itemCreditAchieved)) %>%
       group_by(version_num) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_grid(version_num ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -438,7 +469,7 @@ shinyServer(function(input, output) {
       group_by(version_num) %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
-      geom_line() +
+      geom_step() +
       theme(legend.position = "none") +
       facet_grid(version_num ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
@@ -452,8 +483,7 @@ shinyServer(function(input, output) {
       summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
-      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
-    +
+      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment") +
       facet_wrap( ~ version_num)
   })
   
@@ -467,10 +497,8 @@ shinyServer(function(input, output) {
       group_by(userId, pageNumber, item) %>%
       slice_max(itemCreditAchieved, n = 1) %>%
       distinct() %>%
-      pivot_wider(
-        names_from = c(item, pageNumber),
-        values_from = itemCreditAchieved
-      ) %>%
+      pivot_wider(names_from = c(item, pageNumber),
+                  values_from = itemCreditAchieved) %>%
       ggradar()
   })
   
