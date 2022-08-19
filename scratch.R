@@ -26,7 +26,6 @@ cleaned <- clean_events(events, min(dates), max(dates))
 
 summary_data <- summarize_events(cleaned)
 
-
 summary_data %>%
     select(userId, item, pageNumber, itemCreditAchieved) %>%
     filter(!is.na(item)) %>%
@@ -38,7 +37,6 @@ summary_data %>%
       values_from = itemCreditAchieved
     ) %>%
   ggradar()
-  #ggplot()
 
 cleaned <- clean_events_no_dates(unpacked)
 summarized = summarize_events(cleaned)

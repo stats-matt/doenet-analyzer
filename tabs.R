@@ -24,6 +24,13 @@ activity_tab <-
         br(),
         br(),
         plotOutput("time_plot_version")
+      ),
+      tabPanel(
+        "Histogram of total scores by version",
+        "This page shows a histogram of total score for each version of the activity",
+        br(),
+        br(),
+        plotOutput("hist_total_version")
       )
     )
   )
@@ -38,22 +45,23 @@ problem_tab <-
         "Version Comparison",
         tabsetPanel(
           type = "tabs",
-          tabPanel("Problem Averages", plotOutput("problem_avgs_version")),
-          # numericInput("maxtime_set", "Slider maximum time:", 80000),
-          # uiOutput("slider")
-          # ),
-          
-          # numericInput("maxtime_set", "Slider maximum time:", 80000),
-          # uiOutput("slider")
-          # ),
-          tabPanel(
-            "Histogram of total scores by version",
-            plotOutput("hist_total_version")
-          )
+          tabPanel("Problem Averages", plotOutput("problem_avgs_version"))
         )
       ),
-      tabPanel("Wrong Answers", plotOutput("wrong_plot")),
-      tabPanel("Radar graph", plotOutput("radar_graph")),
+      tabPanel(
+        "Wrong Answers", 
+        "This plot shows the most commonly entered wrong answer for each question",
+        br(),
+        br(),
+        plotOutput("wrong_plot")
+        ),
+      tabPanel(
+        "Radar graph", 
+        "This is a radar graph of progress across all problems - note this is a work in progress",
+        br(),
+        br(),
+        plotOutput("radar_graph")
+        ),
       tabPanel(
         "Question-Specific Data",
         "This set of graphs shows the distribution of submissions for a specific question, as well as the distribution of how many students solved or attempted the question. At the bottom of the page is a graph displaying student scores vs number of submissions.",
