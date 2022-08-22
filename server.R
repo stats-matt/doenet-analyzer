@@ -117,7 +117,11 @@ shinyServer(function(input, output) {
         #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
         #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
         #"_PY82WGbGMv9FIVDzJdxgZ" # calc data for analysis
+        #"_NHhuE6uyxMu0qe1olgd5u", # test the security code
         getQueryString()[["data"]],
+        "&code=",
+        getQueryString()[["code"]],
+        #"rQTyx7joh0mPzNX3JeRAs" # example security code
         end_of_link
       )
     ))
