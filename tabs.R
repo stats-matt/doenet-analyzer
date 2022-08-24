@@ -49,6 +49,13 @@ problem_tab <-
         )
       ),
       tabPanel(
+        "All Answers",
+        "This plot shows a representation of all submitted answers",
+        br(),
+        br(),
+        plotOutput("all_answers_plot")
+      ),
+      tabPanel(
         "Wrong Answers", 
         "This plot shows the most commonly entered wrong answer for each question",
         br(),

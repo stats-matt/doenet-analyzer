@@ -66,7 +66,6 @@ shinyServer(function(input, output) {
       }
     })
   
-  
   # Slider for time in the time plots
   output$time_slider <-
     renderUI({
@@ -78,8 +77,6 @@ shinyServer(function(input, output) {
         value =  c(500, 10000)
       )
     })
-  
-  
   
   # ==========================GETTING DATA=========================================
   # What this code is doing is pulling in the data
@@ -117,12 +114,12 @@ shinyServer(function(input, output) {
         #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
         #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
         #"_PY82WGbGMv9FIVDzJdxgZ" # calc data for analysis
-        #"_NHhuE6uyxMu0qe1olgd5u", # test the security code
+        #"_NHhuE6uyxMu0qe1olgd5u",# test the security code
         getQueryString()[["data"]],
         "&code=",
         getQueryString()[["code"]],
-        #"rQTyx7joh0mPzNX3JeRAs" # example security code
-        end_of_link
+        #"rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
+        #end_of_link
       )
     ))
   })
@@ -426,6 +423,7 @@ shinyServer(function(input, output) {
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
     summary_data() %>%
+      filter(!is.na(response)) %>%
       group_by(item) %>%
       filter(itemCreditAchieved < 1) %>%
       ggplot(aes(
@@ -434,9 +432,27 @@ shinyServer(function(input, output) {
         fill = as.factor(response)
       )) +
       geom_col() +
-      facet_wrap(~ item) +
+      facet_wrap( ~ item, scales = "free") +
       labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
   })
+  
+  # ====================ALL ANSWER PLOTS===================================
+  # From here down is wrong answer code
+  output$all_answers_plot <- renderPlot({
+    summary_data() %>%
+      filter(!is.na(response)) %>%
+      group_by(item) %>%
+      ggplot(aes(
+        x = as.factor(response),
+        y = n,
+        fill = as.factor(response)
+      )) +
+      geom_col() +
+      facet_wrap( ~ item, scales = "free") +
+      labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
+  })
+  
+  
   
   # ================VERSION COMPARISON PLOTS=======================================
   

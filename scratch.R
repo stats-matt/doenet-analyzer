@@ -6,7 +6,11 @@ library(dplyr)
 
 
 
-raw = stream_in(file(paste0("https://www.doenet.org/api/getEventData.php?doenetId[]=_PY82WGbGMv9FIVDzJdxgZ")))
+raw = stream_in(file(
+  paste0(
+    "https://www.doenet.org/api/getEventData.php?doenetId[]=_PY82WGbGMv9FIVDzJdxgZ"
+  )
+))
 events = raw$events[[1]]
 
 events %>% head
@@ -26,16 +30,17 @@ cleaned <- clean_events(events, min(dates), max(dates))
 
 summary_data <- summarize_events(cleaned)
 
+
+
+
 summary_data %>%
-    select(userId, item, pageNumber, itemCreditAchieved) %>%
-    filter(!is.na(item)) %>%
-    group_by(userId, pageNumber, item) %>%
-    slice_max(itemCreditAchieved, n = 1) %>%
-    distinct() %>%
-    pivot_wider(
-      names_from = c(item, pageNumber),
-      values_from = itemCreditAchieved
-    ) %>%
+  select(userId, item, pageNumber, itemCreditAchieved) %>%
+  filter(!is.na(item)) %>%
+  group_by(userId, pageNumber, item) %>%
+  slice_max(itemCreditAchieved, n = 1) %>%
+  distinct() %>%
+  pivot_wider(names_from = c(item, pageNumber),
+              values_from = itemCreditAchieved) %>%
   ggradar()
 
 cleaned <- clean_events_no_dates(unpacked)
@@ -61,13 +66,17 @@ max(proc)
 max(proc) > min(proc)
 
 
-cleaned = clean_events(unpacked, min(proc),max(proc))
+cleaned = clean_events(unpacked, min(proc), max(proc))
 View(cleaned)
 summarized = summarize_events(cleaned)
 View(summarized)
 summarized = summarized %>% group_by(response)
 View(summarized)
-interm = summarized %>% group_by(problem) %>% filter(creditAchieved < 1) %>% ggplot(aes(x = response, y = n,fill = as.factor(response))) + geom_col()+facet_wrap(~problem)
+interm = summarized %>% group_by(problem) %>% filter(creditAchieved < 1) %>% ggplot(aes(
+  x = response,
+  y = n,
+  fill = as.factor(response)
+)) + geom_col() + facet_wrap( ~ problem)
 plot(interm)
 
 
@@ -75,5 +84,4 @@ source("functions.R")
 numvers = pull_versions(cleaned)
 numvers
 
-cleaned_versions <- version_clean(cleaned, numvers )
-
+cleaned_versions <- version_clean(cleaned, numvers)
