@@ -113,12 +113,12 @@ shinyServer(function(input, output) {
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
         #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
         #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
-        #"_PY82WGbGMv9FIVDzJdxgZ" # calc data for analysis
+        "_PY82WGbGMv9FIVDzJdxgZ", # calc data for analysis
         #"_NHhuE6uyxMu0qe1olgd5u",# test the security code
-        getQueryString()[["data"]],
+        #getQueryString()[["data"]],
         "&code=",
-        getQueryString()[["code"]],
-        #"rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
+        #getQueryString()[["code"]],
+        "rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
         #end_of_link
       )
     ))
@@ -507,9 +507,40 @@ shinyServer(function(input, output) {
       facet_wrap( ~ version_num)
   })
   
-  
+  #====================TIME TO QUESTION PLOTS===================================
+  #Average time per question
+  output$time_to_question_av <- renderPlot({
+    cleaned() %>%
+      mutate(answer_num=coalesce(answerAncestor,componentName)) %>%
+      group_by(userId) %>%
+      mutate(time_dif= coalesce(as.numeric(c(NA,diff(time))),as.numeric(time))) %>%
+      group_by(userId,pageNumber,answer_num) %>%
+      summarise(time=sum(time_dif)) %>%
+      ungroup()%>%
+      ggplot(aes(y = time, x = answer_num)) +
+      geom_bar(stat = "summary",fun = "mean") +
+      theme(legend.position = "none",axis.text.x = element_text(angle = 45,hjust = 1)) +
+      facet_wrap( ~ pageNumber) +
+      labs(x = "Question", y = "Time",title = "Average Time per Question")
+  })
+  #Accumolative time per question by userId
+  output$time_to_question <- renderPlot({
+    cleaned() %>%
+      mutate(answer_num=coalesce(answerAncestor,componentName)) %>%
+      group_by(userId) %>%
+      mutate(time_dif= coalesce(as.numeric(c(NA,diff(time))),as.numeric(time))) %>%
+      group_by(userId,pageNumber,answer_num) %>%
+      summarise(time=sum(time_dif)) %>%
+      ungroup()%>%
+      ggplot(aes(y = time, x = answer_num,group=userId,color=userId)) +
+      geom_step() +
+      theme(legend.position = "none",axis.text.x = element_text(angle = 45,hjust = 1)) +
+      facet_wrap( ~ pageNumber) +
+      labs(x = "Question", y = "Time",title = "Time to Question")
+  })
+
   # ================RADAR GRAPH=======================================
-  
+
   output$radar_graph <- renderPlot({
     summary_data() %>%
       select(userId, item, pageNumber, itemCreditAchieved) %>%

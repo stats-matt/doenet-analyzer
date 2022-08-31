@@ -98,10 +98,17 @@ problem_tab <-
           column(12, plotOutput("hist_subm_attempt")),
           column(12, plotOutput("hist_subm_version"))
         )
-      )
-      
+      ),
+      tabPanel("Time per Question",
+               fluidRow(
+                 column(12, plotOutput("time_to_question_av")),
+                 column(12, plotOutput("time_to_question"))
+               )
+
+       )
     )
-  )
+    )
+
 
 # tab for analysis by student ----
 student_tab <-
