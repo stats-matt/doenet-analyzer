@@ -439,7 +439,6 @@ shinyServer(function(input, output) {
   })
   
   # ====================ALL ANSWER PLOTS===================================
-  # From here down is wrong answer code
   output$all_answers_plot <- renderPlot({
     summary_data() %>%
       filter(!is.na(response)) %>%
@@ -451,7 +450,7 @@ shinyServer(function(input, output) {
       )) +
       geom_col() +
       facet_wrap( ~ item, scales = "free") +
-      labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
+      labs(x = "Answer", y = "Frequency", fill = "Answer")
   })
   
   
