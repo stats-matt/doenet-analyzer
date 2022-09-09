@@ -113,13 +113,15 @@ shinyServer(function(input, output) {
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
         #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
         #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
-        "_PY82WGbGMv9FIVDzJdxgZ", # calc data for analysis
+        #"_PY82WGbGMv9FIVDzJdxgZ", # calc data for analysis
         #"_NHhuE6uyxMu0qe1olgd5u",# test the security code
-        #getQueryString()[["data"]],
+        #"_pdiqrEQqDLsTCucSaMdw1" # duane's survey
+        getQueryString()[["data"]],
         "&code=",
-        #getQueryString()[["code"]],
-        "rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
-        #end_of_link
+        getQueryString()[["code"]],
+        #"rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
+        
+        end_of_link
       )
     ))
   })

@@ -15,8 +15,8 @@ clean_events <- function(events, min_date, max_date) {
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time = timestamp - min(timestamp)) %>%
     ungroup()
-  #events <-
-  #  events %>% filter(between(timestamp, min_date, max_date))
+  events <-
+    events %>% filter(between(timestamp, min_date, max_date))
   events <-
     events %>%
     mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
@@ -27,11 +27,8 @@ clean_events <- function(events, min_date, max_date) {
     unnest(new)
   events <-
     events %>%
-    mutate(new = map(
-      result,
-      ~ fromJSON(.) %>% as.data.frame() %>% mutate_if(is.numeric, as.character)
-    )) %>%
-    unnest(new)
+    mutate(response = map(result, ~ fromJSON(.))) %>%
+    unnest(response)
   
   #To solve the problem of multiple types in the response column we used code from
   # the following stackoverflow link:
@@ -45,9 +42,9 @@ clean_events <- function(events, min_date, max_date) {
   #   events %>%
   #   filter(!is.na(documentCreditAchieved))
   
-  events$version_num = NA
-  processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
-  processed = processed[order(processed$min_stamp),]
+  events$version_num <-  NA
+  processed <-  events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
+  processed <-  processed[order(processed$min_stamp), ]
   dict = c(1:nrow(processed))
   names(dict) = processed$activityCid
   for (i in (1:(nrow(events)))) {
@@ -76,11 +73,11 @@ clean_events_no_dates <- function(events) {
     unnest(new)
   events <-
     events %>%
-    mutate(new = map(
+    mutate(response = map(
       result,
-      ~ fromJSON(.) %>% as.data.frame() %>% mutate_if(is.numeric, as.character)
+      ~ fromJSON(.)
     )) %>%
-    unnest(new)
+    unnest(response)
   
   #To solve the problem of multiple types in the response column we used code from
   # the following stackoverflow link:
@@ -96,7 +93,7 @@ clean_events_no_dates <- function(events) {
   
   events$version_num = NA
   processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
-  processed = processed[order(processed$min_stamp),]
+  processed = processed[order(processed$min_stamp), ]
   dict = c(1:nrow(processed))
   names(dict) = processed$activityCid
   for (i in (1:(nrow(events)))) {

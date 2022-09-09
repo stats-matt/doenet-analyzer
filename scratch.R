@@ -4,47 +4,25 @@ library(jsonlite)
 library(anytime)
 library(dplyr)
 
-
-
 raw = stream_in(file(
   paste0(
-    "https://www.doenet.org/api/getEventData.php?doenetId[]=_PY82WGbGMv9FIVDzJdxgZ"
+    "https://www.doenet.org/api/getEventData.php?doenetId[]=_pdiqrEQqDLsTCucSaMdw1"
   )
 ))
-events = raw$events[[1]]
-
-events %>% head
-
-rm(raw)
-
-events %>% distinct(userId)
-
+events <-  raw$events[[1]]
 # _PY82WGbGMv9FIVDzJdxgZ - this is the MN weird calc class
+# _pdiqrEQqDLsTCucSaMdw1 - duane's survey
 #_dKAX4QFX3JGXILGwaApZY
 #_xmSpj9tMI84bWWWlp8UTm
 
-
 dates <- pull_dates(events)
 dates
+
+min_date <- min(dates)
+max_date <- max(dates)
+
 cleaned <- clean_events(events, min(dates), max(dates))
-
 summary_data <- summarize_events(cleaned)
-
-
-
-
-summary_data %>%
-  select(userId, item, pageNumber, itemCreditAchieved) %>%
-  filter(!is.na(item)) %>%
-  group_by(userId, pageNumber, item) %>%
-  slice_max(itemCreditAchieved, n = 1) %>%
-  distinct() %>%
-  pivot_wider(names_from = c(item, pageNumber),
-              values_from = itemCreditAchieved) %>%
-  ggradar()
-
-cleaned <- clean_events_no_dates(unpacked)
-summarized = summarize_events(cleaned)
 
 summary_data %>%
   group_by(userId) %>%
