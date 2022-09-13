@@ -6,7 +6,7 @@ library(dplyr)
 library(scales)
 library(DT)
 
-#devtools::install_github("ricardo-bion/ggradar")
+# devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
 
 shinyServer(function(input, output) {
@@ -115,12 +115,11 @@ shinyServer(function(input, output) {
         #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
         #"_PY82WGbGMv9FIVDzJdxgZ", # calc data for analysis
         #"_NHhuE6uyxMu0qe1olgd5u",# test the security code
-        #"_pdiqrEQqDLsTCucSaMdw1" # duane's survey
+        #"_pdiqrEQqDLsTCucSaMdw1",# duane's survey
         getQueryString()[["data"]],
         "&code=",
         getQueryString()[["code"]],
         #"rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
-        
         end_of_link
       )
     ))
@@ -260,7 +259,7 @@ shinyServer(function(input, output) {
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
-      facet_wrap( ~ pageNumber) +
+      facet_wrap(~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(input$maxtime[1], input$maxtime[2])
   })
@@ -271,7 +270,7 @@ shinyServer(function(input, output) {
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
-      facet_wrap( ~ pageNumber) +
+      facet_wrap(~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(0, input$maxtime[2])
   })
@@ -390,7 +389,7 @@ shinyServer(function(input, output) {
     subm_by_id <-
       table(q_data$userId, q_data$creditAchieved) %>% as.data.frame()
     solv <-
-      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
+      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0,])
     sub <- n_distinct(subm_by_id$Var1) - solv
     not_att <-
       n_distinct(events()$userId, na.rm = TRUE) - solv - sub
@@ -413,7 +412,7 @@ shinyServer(function(input, output) {
     for (i in 1:nrow(subm_by_id)) {
       id <- subm_by_id[i, 1]
       max_score <-
-        max((q_data[q_data$userId == id, ])$creditAchieved)
+        max((q_data[q_data$userId == id,])$creditAchieved)
       subm_by_id[i, 3] <- max_score
     }
     ggplot(subm_by_id, aes(x = as.factor(Freq), y = V3)) +
@@ -434,26 +433,45 @@ shinyServer(function(input, output) {
         fill = as.factor(response)
       )) +
       geom_col() +
-      facet_wrap( ~ item, scales = "free") +
+      facet_wrap(~ item, scales = "free") +
       labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
   })
   
   # ====================ALL ANSWER PLOTS===================================
   output$all_answers_plot <- renderPlot({
-    summary_data() %>%
-      filter(!is.na(response)) %>%
-      group_by(item) %>%
-      ggplot(aes(
-        x = as.factor(response),
-        y = n,
-        fill = as.factor(response)
-      )) +
-      geom_col() +
-      facet_wrap( ~ item, scales = "free") +
-      labs(x = "Answer", y = "Frequency", fill = "Answer")
+    cleaned_version() %>%
+      filter(verb == "submitted" | verb == "answered") %>%
+      select(userId, response, responseText, item, componentName) %>%
+      filter(componentName != "/aboutSelf") %>%
+      ggplot(aes(x = as.character(responseText))) +
+      geom_bar() +
+      facet_wrap( ~ componentName, scales = "free") +
+      labs(x = "Response", y = "Frequency") +
+      coord_flip()
   })
   
-  # this is some junk
+  output$all_answers_text <- renderDataTable({
+    cleaned_version() %>%
+      filter(verb == "submitted" | verb == "answered") %>%
+      filter(componentName == "/aboutSelf") %>%
+      select(response)
+  })
+  
+  # summary_data() %>%
+  #   filter(!is.na(response)) %>%
+  #   group_by(item) %>%
+  #   ggplot(aes(
+  #     x = as.factor(response),
+  #     y = n,
+  #     fill = as.factor(response)
+  #   )) +
+  #   geom_col() +
+  #   facet_wrap( ~ item, scales = "free") +
+  #   labs(x = "Answer", y = "Frequency", fill = "Answer")
+  
+  
+  
+  
   
   
   # ================VERSION COMPARISON PLOTS=======================================
@@ -506,43 +524,54 @@ shinyServer(function(input, output) {
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment") +
-      facet_wrap( ~ version_num)
+      facet_wrap(~ version_num)
   })
   
   #====================TIME TO QUESTION PLOTS===================================
   #Average time per question
   output$time_to_question_av <- renderPlot({
     cleaned() %>%
-      mutate(answer_num=coalesce(answerAncestor,componentName)) %>%
+      mutate(answer_num = coalesce(answerAncestor, componentName)) %>%
       group_by(userId) %>%
-      mutate(time_dif= coalesce(as.numeric(c(NA,diff(time))),as.numeric(time))) %>%
-      group_by(userId,pageNumber,answer_num) %>%
-      summarise(time=sum(time_dif)) %>%
-      ungroup()%>%
+      mutate(time_dif = coalesce(as.numeric(c(NA, diff(
+        time
+      ))), as.numeric(time))) %>%
+      group_by(userId, pageNumber, answer_num) %>%
+      summarise(time = sum(time_dif)) %>%
+      ungroup() %>%
       ggplot(aes(y = time, x = answer_num)) +
-      geom_bar(stat = "summary",fun = "mean") +
-      theme(legend.position = "none",axis.text.x = element_text(angle = 45,hjust = 1)) +
-      facet_wrap( ~ pageNumber) +
-      labs(x = "Question", y = "Time",title = "Average Time per Question")
+      geom_bar(stat = "summary", fun = "mean") +
+      theme(legend.position = "none",
+            axis.text.x = element_text(angle = 45, hjust = 1)) +
+      facet_wrap(~ pageNumber) +
+      labs(x = "Question", y = "Time", title = "Average Time per Question")
   })
   #Accumolative time per question by userId
   output$time_to_question <- renderPlot({
     cleaned() %>%
-      mutate(answer_num=coalesce(answerAncestor,componentName)) %>%
+      mutate(answer_num = coalesce(answerAncestor, componentName)) %>%
       group_by(userId) %>%
-      mutate(time_dif= coalesce(as.numeric(c(NA,diff(time))),as.numeric(time))) %>%
-      group_by(userId,pageNumber,answer_num) %>%
-      summarise(time=sum(time_dif)) %>%
-      ungroup()%>%
-      ggplot(aes(y = time, x = answer_num,group=userId,color=userId)) +
+      mutate(time_dif = coalesce(as.numeric(c(NA, diff(
+        time
+      ))), as.numeric(time))) %>%
+      group_by(userId, pageNumber, answer_num) %>%
+      summarise(time = sum(time_dif)) %>%
+      ungroup() %>%
+      ggplot(aes(
+        y = time,
+        x = answer_num,
+        group = userId,
+        color = userId
+      )) +
       geom_step() +
-      theme(legend.position = "none",axis.text.x = element_text(angle = 45,hjust = 1)) +
-      facet_wrap( ~ pageNumber) +
-      labs(x = "Question", y = "Time",title = "Time to Question")
+      theme(legend.position = "none",
+            axis.text.x = element_text(angle = 45, hjust = 1)) +
+      facet_wrap(~ pageNumber) +
+      labs(x = "Question", y = "Time", title = "Time to Question")
   })
-
+  
   # ================RADAR GRAPH=======================================
-
+  
   output$radar_graph <- renderPlot({
     summary_data() %>%
       select(userId, item, pageNumber, itemCreditAchieved) %>%

@@ -53,7 +53,14 @@ problem_tab <-
         "This plot shows a representation of all submitted answers",
         br(),
         br(),
-        plotOutput("all_answers_plot")
+         plotOutput("all_answers_plot")
+      #   dataTableOutput("all_answers_text")
+       ),
+      tabPanel(
+        "Text tab",
+        br(),
+        br(),
+        dataTableOutput("all_answers_text")
       ),
       tabPanel(
         "Wrong Answers", 

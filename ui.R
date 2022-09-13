@@ -1,5 +1,16 @@
 # enableBookmarking(store = "url")
 
+library(shiny)
+library(tidyverse)
+library(jsonlite)
+library(anytime)
+library(dplyr)
+library(scales)
+library(DT)
+
+# devtools::install_github("ricardo-bion/ggradar")
+library(ggradar)
+
 source("tabs.R")
 
 shinyUI(fluidPage(
