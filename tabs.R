@@ -41,41 +41,36 @@ problem_tab <-
     "Analyze Individual Problems",
     "These tabs provide feedback at the problem level",
     tabsetPanel(
-      tabPanel(
-        "Version Comparison",
-        tabsetPanel(
-          type = "tabs",
-          tabPanel("Problem Averages", plotOutput("problem_avgs_version"))
-        )
-      ),
+      tabPanel("Version Comparison",
+               tabsetPanel(
+                 type = "tabs",
+                 tabPanel("Problem Averages", plotOutput("problem_avgs_version"))
+               )),
       tabPanel(
         "All Answers",
         "This plot shows a representation of all submitted answers",
         br(),
         br(),
-         plotOutput("all_answers_plot")
-      #   dataTableOutput("all_answers_text")
-       ),
-      tabPanel(
-        "Text tab",
-        br(),
-        br(),
-        dataTableOutput("all_answers_text")
+        plotOutput("all_answers_plot")
       ),
+      tabPanel("Text tab",
+               br(),
+               br(),
+               dataTableOutput("all_answers_text")),
       tabPanel(
-        "Wrong Answers", 
+        "Wrong Answers",
         "This plot shows the most commonly entered wrong answer for each question",
         br(),
         br(),
         plotOutput("wrong_plot")
-        ),
+      ),
       tabPanel(
-        "Radar graph", 
+        "Radar graph",
         "This is a radar graph of progress across all problems - note this is a work in progress",
         br(),
         br(),
         plotOutput("radar_graph")
-        ),
+      ),
       tabPanel(
         "Question-Specific Data",
         "This set of graphs shows the distribution of submissions for a specific question, as well as the distribution of how many students solved or attempted the question. At the bottom of the page is a graph displaying student scores vs number of submissions.",
@@ -110,11 +105,9 @@ problem_tab <-
                fluidRow(
                  column(12, plotOutput("time_to_question_av")),
                  column(12, plotOutput("time_to_question"))
-               )
-
-       )
+               ))
     )
-    )
+  )
 
 
 # tab for analysis by student ----

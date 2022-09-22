@@ -259,7 +259,7 @@ shinyServer(function(input, output) {
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(input$maxtime[1], input$maxtime[2])
   })
@@ -270,7 +270,7 @@ shinyServer(function(input, output) {
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(0, input$maxtime[2])
   })
@@ -389,7 +389,7 @@ shinyServer(function(input, output) {
     subm_by_id <-
       table(q_data$userId, q_data$creditAchieved) %>% as.data.frame()
     solv <-
-      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0,])
+      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
     sub <- n_distinct(subm_by_id$Var1) - solv
     not_att <-
       n_distinct(events()$userId, na.rm = TRUE) - solv - sub
@@ -412,7 +412,7 @@ shinyServer(function(input, output) {
     for (i in 1:nrow(subm_by_id)) {
       id <- subm_by_id[i, 1]
       max_score <-
-        max((q_data[q_data$userId == id,])$creditAchieved)
+        max((q_data[q_data$userId == id, ])$creditAchieved)
       subm_by_id[i, 3] <- max_score
     }
     ggplot(subm_by_id, aes(x = as.factor(Freq), y = V3)) +
@@ -433,19 +433,21 @@ shinyServer(function(input, output) {
         fill = as.factor(response)
       )) +
       geom_col() +
-      facet_wrap(~ item, scales = "free") +
+      facet_wrap( ~ item, scales = "free") +
       labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
   })
   
   # ====================ALL ANSWER PLOTS===================================
   output$all_answers_plot <- renderPlot({
     cleaned_version() %>%
-      filter(verb == "submitted" | verb == "answered" | verb == "selected") %>% # selected are choice inputs
+      filter(verb == "submitted" |
+               verb == "answered" |
+               verb == "selected") %>% # selected are choice inputs
       select(userId, response, responseText, item, componentName) %>%
       filter(componentName != "/aboutSelf") %>%
       ggplot(aes(x = as.character(responseText))) +
       geom_bar() +
-      facet_wrap( ~ componentName, scales = "free") +
+      facet_wrap(~ componentName, scales = "free") +
       labs(x = "Response", y = "Frequency") +
       coord_flip()
   })
@@ -524,7 +526,7 @@ shinyServer(function(input, output) {
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment") +
-      facet_wrap(~ version_num)
+      facet_wrap( ~ version_num)
   })
   
   #====================TIME TO QUESTION PLOTS===================================
@@ -543,7 +545,7 @@ shinyServer(function(input, output) {
       geom_bar(stat = "summary", fun = "mean") +
       theme(legend.position = "none",
             axis.text.x = element_text(angle = 45, hjust = 1)) +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Question", y = "Time", title = "Average Time per Question")
   })
   #Accumolative time per question by userId
@@ -566,7 +568,7 @@ shinyServer(function(input, output) {
       geom_step() +
       theme(legend.position = "none",
             axis.text.x = element_text(angle = 45, hjust = 1)) +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Question", y = "Time", title = "Time to Question")
   })
   

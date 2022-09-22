@@ -49,13 +49,11 @@ shinyUI(fluidPage(
       uiOutput("version_select")
     ),
     mainPanel(
-      tabsetPanel(
-        type = "pills",
-        activity_tab,
-        problem_tab,
-        student_tab,
-        data_tab
-      )
+      tabsetPanel(type = "pills",
+                  activity_tab,
+                  problem_tab,
+                  student_tab,
+                  data_tab)
     )
   )
 ))
