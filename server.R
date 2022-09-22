@@ -440,7 +440,7 @@ shinyServer(function(input, output) {
   # ====================ALL ANSWER PLOTS===================================
   output$all_answers_plot <- renderPlot({
     cleaned_version() %>%
-      filter(verb == "submitted" | verb == "answered") %>%
+      filter(verb == "submitted" | verb == "answered" | verb == "selected") %>% # selected are choice inputs
       select(userId, response, responseText, item, componentName) %>%
       filter(componentName != "/aboutSelf") %>%
       ggplot(aes(x = as.character(responseText))) +
