@@ -1,15 +1,15 @@
 # enableBookmarking(store = "url")
 
-library(shiny)
-library(tidyverse)
-library(jsonlite)
-library(anytime)
-library(dplyr)
-library(scales)
-library(DT)
-
-# devtools::install_github("ricardo-bion/ggradar")
-library(ggradar)
+# library(shiny)
+# library(tidyverse)
+# library(jsonlite)
+# library(anytime)
+# library(dplyr)
+# library(scales)
+# library(DT)
+# 
+# # devtools::install_github("ricardo-bion/ggradar")
+# library(ggradar)
 
 source("tabs.R")
 
@@ -52,7 +52,7 @@ shinyUI(fluidPage(
       tabsetPanel(type = "pills",
                   activity_tab,
                   problem_tab,
-                  student_tab,
+                  #student_tab,
                   data_tab)
     )
   )

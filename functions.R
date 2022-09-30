@@ -20,7 +20,7 @@ clean_events <- function(events, min_date, max_date) {
     mutate(time_person = timestamp - min(timestamp)) %>%
     ungroup() %>%
     mutate(time_activity = timestamp - min(timestamp)) %>%
-    filter(between(timestamp, min_date, max_date))
+    filter((timestamp > min_date) & (timestamp < max_date))
   
   events <- # this separates the context, object, and result columns
     events %>%
