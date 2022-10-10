@@ -111,7 +111,8 @@ shinyServer(function(input, output) {
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        getQueryString()[["data"]],
+        #doenetid, # this is for local work
+        getQueryString()[["data"]], # this is the web version
         "&code=",
         getQueryString()[["code"]],
         end_of_link
