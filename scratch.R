@@ -18,16 +18,20 @@ raw <-  stream_in(file(
   )
 ))
 
-# clean the data
+# clean the data, test the functions
 events <-  raw$events[[1]]
 dates <- pull_dates(events)
+versions <- pull_versions(events)
 min_date <- min(dates)
 max_date <- max(dates)
-cleaned_version <- clean_events(events, min(dates), max(dates))
-summary_data_version <- summarize_events(cleaned)
-cleaned <- version_filter(cleaned_version, 1)
+cleaned_versions <- clean_events(events, min(dates), max(dates))
+summary_data_versions <- summarize_events(cleaned_versions)
+cleaned <- version_filter(cleaned_versions, 1)
 summary_data <- summarize_events(cleaned)
 
 ###########################################
-##### work below here
+##### do local work below here
 ###########################################
+
+
+

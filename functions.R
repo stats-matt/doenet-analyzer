@@ -8,25 +8,26 @@
 #JSON strings.
 
 clean_events <- function(events, min_date, max_date) {
-  #This block adds the timestamp column to the cleaned data set
-  events <-
+  
+  events <- # remove visible verbs to keep the data smallish
+    events %>% 
+    filter(verb != "isVisible")
+  
+  events <- #This block adds the timestamp column to the cleaned data set
     events %>%
     group_by(userId) %>%
     mutate(timestamp = anytime(timestamp)) %>%
-    mutate(time = timestamp - min(timestamp)) %>%
-    ungroup()
-  events <-
-    events %>% filter(between(timestamp, min_date, max_date))
-  events <-
+    mutate(time_person = timestamp - min(timestamp)) %>%
+    ungroup() %>%
+    mutate(time_activity = timestamp - min(timestamp)) %>%
+    filter((timestamp > min_date) & (timestamp < max_date))
+  
+  events <- # this separates the context, object, and result columns
     events %>%
     mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
-    unnest_wider(new)
-  events <-
-    events %>%
+    unnest_wider(new) %>% 
     mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
-    unnest_wider(new)
-  events <-
-    events %>%
+    unnest_wider(new) %>% 
     mutate(response = map(result, ~ fromJSON(.))) %>%
     unnest_wider(response)
   
@@ -55,52 +56,6 @@ clean_events <- function(events, min_date, max_date) {
   return(events)
 }
 
-
-clean_events_no_dates <- function(events) {
-  #This block adds the timestamp column to the cleaned data set
-  events <-
-    events %>%
-    group_by(userId) %>%
-    mutate(timestamp = anytime(timestamp)) %>%
-    mutate(time = timestamp - min(timestamp)) %>%
-    ungroup()
-  events <-
-    events %>%
-    mutate(new = map(context, ~ fromJSON(.))) %>%
-    unnest_wider(new)
-  events <-
-    events %>%
-    mutate(new = map(object, ~ fromJSON(.))) %>%
-    unnest_wider(new)
-  events <-
-    events %>%
-    mutate(new = map(result,  ~ fromJSON(.))) %>%
-    unnest_wider(new)
-  
-  #To solve the problem of multiple types in the response column we used code from
-  # the following stackoverflow link:
-  # https://stackoverflow.com/questions/27668266/dplyr-change-many-data-types
-  #
-  # events <-
-  #   events %>%
-  #   separate(componentName, into = c(NA, "section", "answer", "type"))
-  #
-  # events <-
-  #   events %>%
-  #   filter(!is.na(documentCreditAchieved))
-  
-  events$version_num = NA
-  processed = events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
-  processed = processed[order(processed$min_stamp),]
-  dict = c(1:nrow(processed))
-  names(dict) = processed$activityCid
-  for (i in (1:(nrow(events)))) {
-    working_id = events[[i, 4]]
-    events[[i, ncol(events)]] = dict[working_id]
-  }
-  return(events)
-}
-
 #=================summarize_events==============================================
 #This creates the summary data
 #We start with the cleaned data and select the relevant columns
@@ -113,31 +68,26 @@ clean_events_no_dates <- function(events) {
 summarize_events <- function(data) {
   out <-
     data %>%
-    # select(userId, starts_with("X"), time, timestamp, pageNumber,
-    #        version_num,response,creditAchieved) %>%
     select(
       userId,
-      item,
-      time,
       timestamp,
+      time_person,
+      time_activity,
       pageNumber,
       version_num,
       response,
+      verb,
+      item,
       itemCreditAchieved,
-      pageCreditAchieved
+      pageCreditAchieved,
+      pageVariantIndex, 
+      activityVariantIndex
     ) %>%
-    # group_by(userId, pageNumber, version_num) %>%
-    # pivot_longer(cols = starts_with("X"),
-    #              names_to = "problem",
-    #              values_to = "score") %>%
-    # ungroup() %>%
-    #filter(score != -Inf) %>%
-    group_by(item, version_num) %>%
+    filter(verb == "submitted") %>% 
+    group_by(item, version_num, pageVariantIndex, activityVariantIndex) %>%
     mutate(avg = mean(itemCreditAchieved)) %>%
-    ungroup() %>%
-    group_by(response) %>%
-    add_count(response) %>%
-    ungroup()
+    ungroup() %>% 
+    add_count(response, item, version_num, pageVariantIndex, activityVariantIndex)
   
   return(out)
 }

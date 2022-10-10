@@ -111,25 +111,15 @@ shinyServer(function(input, output) {
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        #"_YImZRcgrUqyNBLHd0tbP2" # for debugging to have a set doenetid to use
-        #"_dKAX4QFX3JGXILGwaApZY" # uses v0.1.1
-        #"_PY82WGbGMv9FIVDzJdxgZ", # calc data for analysis
-        #"_NHhuE6uyxMu0qe1olgd5u",# test the security code
-        #"_pdiqrEQqDLsTCucSaMdw1",# duane's survey
-        getQueryString()[["data"]],
+        #doenetid, # this is for local work
+        getQueryString()[["data"]], # this is the web version
         "&code=",
         getQueryString()[["code"]],
-        #"rQTyx7joh0mPzNX3JeRAs" # example security code for calc data
         end_of_link
       )
     ))
   })
-  
-  
-  
-  
-  
-  
+
   # =================================PROCESSING DATA===============================
   # This block pulls out the events log, which is a dataframe, within a
   # 1 element list within a 1 by 3 dataframe. So df is the frame,
@@ -147,9 +137,9 @@ shinyServer(function(input, output) {
   
   # A note on how data is currently structured:
   # There are four working sets:
-  # cleaned_version -> all the way cleaned except including data from all versions
+  # cleaned_versions -> all the way cleaned except including data from all versions
   #                    of the activity (needed for version comparison)
-  # summary_data_version -> summary of the cleaned_version set by problem
+  # summary_data_versions -> summary of the cleaned_version set by problem
   #                         needed to do version by version by problem comparisons
   # cleaned -> the true cleaned data, which is cleaned filtered to look at the
   #             selected version. This is used for all non-cross-version plots.
@@ -160,17 +150,17 @@ shinyServer(function(input, output) {
   
   
   # Input from date slider determines which dates are included in the set.
-  cleaned_version <- reactive({
+  cleaned_versions <- reactive({
     clean_events(events(), input$date_range[1], input$date_range[2])
   })
   
-  summary_data_version <- reactive({
-    summarize_events(cleaned_version())
+  summary_data_versions <- reactive({
+    summarize_events(cleaned_versions())
   })
   
   # Filter takes in previously cleaned data and then the version we select
   cleaned <- reactive({
-    version_filter(cleaned_version(), input$version_selected)
+    version_filter(cleaned_versions(), input$version_selected)
   })
   
   summary_data <- reactive({
@@ -213,15 +203,17 @@ shinyServer(function(input, output) {
   )
   
   # =========================DATA TABLES===========================================
-  # creates a table of cleaned data
-  output$cleaned_data_w_versions <-
-    renderDataTable(cleaned_version())
-  
-  # creates a table of raw data
-  output$raw <- renderDataTable(events())
-  
-  # This renders the summary data in a table
-  output$summary <- renderDataTable(summary_data())
+  # creates tables of each of the data versions to view/troubleshoot in a tab
+  output$events <-
+    renderDataTable(events())
+  output$cleaned_versions <-
+    renderDataTable(cleaned_versions())
+  output$summary_data_versions <-
+    renderDataTable(summary_data_versions())
+  output$cleaned <-
+    renderDataTable(cleaned())
+  output$summary_data <-
+    renderDataTable(summary_data())
   
   # =======================SUMMARY TEXT============================================
   # creates an output text detailing how many students in the data set
@@ -247,13 +239,13 @@ shinyServer(function(input, output) {
   output$num_pages <-
     renderText(paste0(
       "There is/are ",
-      n_distinct(summary_data_version()$pageNumber, na.rm = TRUE),
+      n_distinct(summary_data_versions()$pageNumber, na.rm = TRUE),
       " page(s)"
     ))
   
   # =============================GENERAL PLOTS=====================================
   # This is a plot that shows time to credit for each problem
-  output$time_plot <- renderPlot({
+  output$time_plot_a <- renderPlot({
     cleaned() %>%
       filter(!is.na(itemCreditAchieved)) %>%
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
@@ -439,7 +431,7 @@ shinyServer(function(input, output) {
   
   # ====================ALL ANSWER PLOTS===================================
   output$all_answers_plot <- renderPlot({
-    cleaned_version() %>%
+    cleaned_versions() %>%
       filter(verb == "submitted" |
                verb == "answered" |
                verb == "selected") %>% # selected are choice inputs
@@ -453,7 +445,7 @@ shinyServer(function(input, output) {
   })
   
   output$all_answers_text <- renderDataTable({
-    cleaned_version() %>%
+    cleaned_versions() %>%
       filter(verb == "submitted" | verb == "answered") %>%
       filter(componentName == "/aboutSelf") %>%
       select(response)
@@ -480,7 +472,7 @@ shinyServer(function(input, output) {
   
   # This one just does a bar graph of average score for each question
   output$problem_avgs_version <- renderPlot({
-    summary_data_version() %>%
+    summary_data_versions() %>%
       group_by(version_num) %>%
       # arrange(avg) %>%
       ggplot(aes(
@@ -493,34 +485,32 @@ shinyServer(function(input, output) {
       # guides(fill=guide_legend(title="Version")) +
       ylim(c(0, 1))
   })
-  # This is time plots faceted by version
-  output$time_plot_version <- renderPlot({
-    cleaned_version() %>%
-      filter(!is.na(itemCreditAchieved)) %>%
-      group_by(version_num) %>%
-      ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
+  # This is time plots faceted by version for person version of graph
+  output$time_plot_person_version <- renderPlot({
+    cleaned_versions() %>%
+      filter(!is.na(pageCreditAchieved)) %>%
+      ggplot(aes(y = pageCreditAchieved, x = time_person, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
       facet_grid(version_num ~ pageNumber) +
-      labs(x = "Time", y = "Total Credit on Page") +
+      labs(x = "Time since person loaded page", y = "Total Credit on Page") +
       xlim(input$maxtime[1], input$maxtime[2])
   })
   # Timeplot from start, again, faceted by version
-  output$time_plot_s_version <- renderPlot({
-    cleaned_version() %>%
-      group_by(version_num) %>%
-      filter(!is.na(itemCreditAchieved)) %>%
-      ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
+  output$time_plot_activity_version <- renderPlot({
+    cleaned_versions() %>%
+      filter(!is.na(pageCreditAchieved)) %>%
+      ggplot(aes(y = pageCreditAchieved, x = time_activity, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
       facet_grid(version_num ~ pageNumber) +
-      labs(x = "Time", y = "Total Credit on Page") +
+      labs(x = "Time since page was first loaded (by anyone)", y = "Total Credit on Page") +
       xlim(0, input$maxtime[2])
   })
   # histogram of total scores faceted by version
   # bins = nrow(distinct(summary_data() , score))
   output$hist_total_version <- renderPlot({
-    summary_data_version() %>%
+    summary_data_versions() %>%
       group_by(userId, version_num) %>%
       summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +

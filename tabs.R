@@ -1,29 +1,15 @@
 # tab for all content in doenetid ----
 activity_tab <-
   tabPanel(
-    "Analyze Activity/Content",
+    "Analyze activity/content",
     "These tabs provide feedback on the entire activity",
     tabsetPanel(
       tabPanel(
-        "Histogram of Total Scores",
-        "These are the frequencies of the total scores achieved by all students",
+        "Histogram of total scores",
+        "Here are the frequencies of the total scores achieved by all students",
         br(),
         br(),
         plotOutput("hist_total")
-      ),
-      tabPanel(
-        "Time Plots from start by version",
-        "These show the time until credit was achieved by students at different times from the time when the first student opened the activity",
-        br(),
-        br(),
-        plotOutput("time_plot_s_version")
-      ),
-      tabPanel(
-        "Time Plots by version",
-        "These show the time until credit achieve from the time each student first opened their activity",
-        br(),
-        br(),
-        plotOutput("time_plot_version")
       ),
       tabPanel(
         "Histogram of total scores by version",
@@ -31,9 +17,23 @@ activity_tab <-
         br(),
         br(),
         plotOutput("hist_total_version")
+      ),
+      tabPanel(
+        "Time plot from first loading, by version",
+        "Here are the times until credit was achieved, where time is computed from the time the activity was first loaded, by version.",
+        br(),
+        br(),
+        plotOutput("time_plot_activity_version")
+      ),
+      tabPanel(
+        "Time plots from each student loading, by version",
+        "Here are the times until credit was achieved from the time each student first opened their activity",
+        br(),
+        br(),
+        plotOutput("time_plot_person_version")
+      )
       )
     )
-  )
 
 # tab for analysis by problem ----
 problem_tab <-
@@ -111,15 +111,16 @@ problem_tab <-
 
 
 # tab for analysis by student ----
-student_tab <-
-  tabPanel(
-    "Analyze Students",
-    "These tabs provide feedback on students",
-    tabsetPanel(
-      tabPanel("Time Plot", plotOutput("time_plot")),
-      tabPanel("Time Plot from start", plotOutput("time_plot_s"))
-    )
-  )
+# student_tab <-
+#   tabPanel(
+#     "Analyze Students",
+#     "These tabs provide feedback on students",
+#     tabsetPanel(
+#       tabPanel("Time Plot", plotOutput("time_plot")),
+#       tabPanel("Time Plot from start", plotOutput("time_plot_s"))
+#     )
+#   )
+
 # numericInput("maxtime_set", "Slider maximum time:", 80000),
 # uiOutput("slider")
 # ),))
@@ -137,8 +138,10 @@ data_tab <-
         textOutput("num_doenetIds"),
         textOutput("num_versions")
       ),
-      tabPanel("Summary Data", dataTableOutput("summary")),
-      tabPanel("Raw Data", dataTableOutput("raw")),
-      tabPanel("Cleaned Data", dataTableOutput("cleaned_data_w_versions"))
+      tabPanel("Raw Data (events)", dataTableOutput("events")),
+      tabPanel("Cleaned, all versions", dataTableOutput("cleaned_versions")),
+      tabPanel("Summary, all versions", dataTableOutput("summary_data_versions")),
+      tabPanel("Cleaned, selected version", dataTableOutput("cleaned")),
+      tabPanel("Summary, selected version", dataTableOutput("summary_data"))
     )
   )
