@@ -10,7 +10,7 @@ library(dplyr)
 source("functions.R")
 
 # load data (put in a doenetid - good doenetids to use are on slack)
-doenetid <- "_ds4TPv9RAI9b3DnYvgROo"
+doenetid <- ""
 raw <-  stream_in(file(
   paste0(
     "https://www.doenet.org/api/getEventData.php?doenetId[]=",

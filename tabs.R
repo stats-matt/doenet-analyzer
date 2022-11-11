@@ -138,10 +138,10 @@ data_tab <-
         textOutput("num_doenetIds"),
         textOutput("num_versions")
       ),
-      tabPanel("Raw Data (events)", dataTableOutput("events")),
-      tabPanel("Cleaned, all versions", dataTableOutput("cleaned_versions")),
-      tabPanel("Summary, all versions", dataTableOutput("summary_data_versions")),
-      tabPanel("Cleaned, selected version", dataTableOutput("cleaned")),
-      tabPanel("Summary, selected version", dataTableOutput("summary_data"))
+      tabPanel("Raw Data (events)", dataTableOutput("events_dt")),
+      tabPanel("Cleaned, all versions", dataTableOutput("cleaned_versions_dt")),
+      tabPanel("Summary, all versions", dataTableOutput("summary_data_versions_dt")),
+      tabPanel("Cleaned, selected version", dataTableOutput("cleaned_dt")),
+      tabPanel("Summary, selected version", dataTableOutput("summary_data_dt"))
     )
   )
