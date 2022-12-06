@@ -43,16 +43,25 @@ clean_events <- function(events, min_date, max_date) {
   #   events %>%
   #   filter(!is.na(documentCreditAchieved))
   
-  events$version_num <-  NA
-  processed <-
-    events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
-  processed <-  processed[order(processed$min_stamp),]
-  dict <- c(1:nrow(processed))
-  names(dict) = processed$activityCid
-  for (i in (1:(nrow(events)))) {
-    working_id = events[[i, 4]]
-    events[[i, ncol(events)]] = dict[working_id]
-  }
+  
+  
+  # this has been replaced by the line below it
+  # events$version_num <-  NA
+  # processed <-
+  #   events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
+  # processed <-  processed[order(processed$min_stamp),]
+  # dict <- c(1:nrow(processed))
+  # names(dict) = processed$activityCid
+  # for (i in (1:(nrow(events)))) {
+  #   working_id = events[[i, 4]]
+  #   events[[i, ncol(events)]] = dict[working_id]
+  # }
+  
+  events$version_num <- events$activityCid %>% as.factor() %>% as.numeric()
+  
+  
+  
+  
   return(events)
 }
 
