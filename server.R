@@ -204,15 +204,15 @@ shinyServer(function(input, output) {
   
   # =========================DATA TABLES===========================================
   # creates tables of each of the data versions to view/troubleshoot in a tab
-  output$events <-
+  output$events_dt <-
     renderDataTable(events())
-  output$cleaned_versions <-
+  output$cleaned_versions_dt <-
     renderDataTable(cleaned_versions())
-  output$summary_data_versions <-
+  output$summary_data_versions_dt <-
     renderDataTable(summary_data_versions())
-  output$cleaned <-
+  output$cleaned_dt <-
     renderDataTable(cleaned())
-  output$summary_data <-
+  output$summary_data_dt <-
     renderDataTable(summary_data())
   
   # =======================SUMMARY TEXT============================================
@@ -575,5 +575,7 @@ shinyServer(function(input, output) {
                   values_from = itemCreditAchieved) %>%
       ggradar()
   })
+  
+  
   
 })
