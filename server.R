@@ -447,7 +447,7 @@ shinyServer(function(input, output) {
   output$all_answers_text <- renderDataTable({
     cleaned_versions() %>%
       filter(verb == "submitted" | verb == "answered") %>%
-      filter(componentName == "/aboutSelf") %>%
+      #filter(componentName == "/aboutSelf") %>%
       select(response)
   })
   

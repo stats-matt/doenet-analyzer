@@ -6,6 +6,7 @@ library(tidyverse)
 library(jsonlite)
 library(anytime)
 library(dplyr)
+library(DT)
 
 source("functions.R")
 
