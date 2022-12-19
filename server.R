@@ -112,6 +112,7 @@ shinyServer(function(input, output) {
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
         #doenetid, # this is for local work
+        #"",
         getQueryString()[["data"]], # this is the web version
         "&code=",
         getQueryString()[["code"]],
@@ -205,15 +206,15 @@ shinyServer(function(input, output) {
   # =========================DATA TABLES===========================================
   # creates tables of each of the data versions to view/troubleshoot in a tab
   output$events_dt <-
-    renderDataTable(events())
+    DT::renderDT(events())
   output$cleaned_versions_dt <-
-    renderDataTable(cleaned_versions())
+    DT::renderDT(cleaned_versions())
   output$summary_data_versions_dt <-
-    renderDataTable(summary_data_versions())
+    DT::renderDT(summary_data_versions())
   output$cleaned_dt <-
-    renderDataTable(cleaned())
+    DT::renderDT(cleaned())
   output$summary_data_dt <-
-    renderDataTable(summary_data())
+    DT::renderDT(summary_data())
   
   # =======================SUMMARY TEXT============================================
   # creates an output text detailing how many students in the data set
@@ -444,7 +445,8 @@ shinyServer(function(input, output) {
       coord_flip()
   })
   
-  output$all_answers_text <- renderDataTable({
+  
+  output$all_answers_text <- DT::renderDT({
     cleaned_versions() %>%
       filter(verb == "submitted" | verb == "answered") %>%
       group_by(userId) %>% 
@@ -471,7 +473,7 @@ shinyServer(function(input, output) {
   
   
   
-  # ================VERSION COMPARISON PLOTS=======================================
+  # ================VERSION COMPARISON PLOTS=====================
   
   # This one just does a bar graph of average score for each question
   output$problem_avgs_version <- renderPlot({
@@ -522,7 +524,7 @@ shinyServer(function(input, output) {
       facet_wrap( ~ version_num)
   })
   
-  #====================TIME TO QUESTION PLOTS===================================
+  #====================TIME TO QUESTION PLOTS===================
   #Average time per question
   output$time_to_question_av <- renderPlot({
     cleaned() %>%

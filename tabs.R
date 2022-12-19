@@ -56,7 +56,7 @@ problem_tab <-
       tabPanel("Text tab",
                br(),
                br(),
-               dataTableOutput("all_answers_text")),
+               DT::DTOutput("all_answers_text")),
       tabPanel(
         "Wrong Answers",
         "This plot shows the most commonly entered wrong answer for each question",
@@ -138,10 +138,10 @@ data_tab <-
         textOutput("num_doenetIds"),
         textOutput("num_versions")
       ),
-      tabPanel("Raw Data (events)", dataTableOutput("events_dt")),
-      tabPanel("Cleaned, all versions", dataTableOutput("cleaned_versions_dt")),
-      tabPanel("Summary, all versions", dataTableOutput("summary_data_versions_dt")),
-      tabPanel("Cleaned, selected version", dataTableOutput("cleaned_dt")),
-      tabPanel("Summary, selected version", dataTableOutput("summary_data_dt"))
+      tabPanel("Raw Data (events)", DT::DTOutput("events_dt")),
+      tabPanel("Cleaned, all versions", DT::DTOutput("cleaned_versions_dt")),
+      tabPanel("Summary, all versions", DT::DTOutput("summary_data_versions_dt")),
+      tabPanel("Cleaned, selected version", DT::DTOutput("cleaned_dt")),
+      tabPanel("Summary, selected version", DT::dataTableOutput("summary_data_dt"))
     )
   )
