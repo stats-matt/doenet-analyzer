@@ -58,10 +58,7 @@ clean_events <- function(events, min_date, max_date) {
   # }
   
   events$version_num <- events$activityCid %>% as.factor() %>% as.numeric()
-  
-  
-  
-  
+
   return(events)
 }
 

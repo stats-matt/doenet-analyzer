@@ -9,10 +9,10 @@ library(DT)
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
 
-shinyServer(function(input, output) {
+shinyServer(function(input, output, session) {
   source("./functions.R")
   
-  # ==========PRE CLEANING INPUTS==================================================
+  # ==========PRE CLEANING INPUTS==========================
   
   # maximum 5 ids to compare/ hard coded
   # So this code is going through and adding one extra Doenet ID entry box
@@ -78,7 +78,7 @@ shinyServer(function(input, output) {
       )
     })
   
-  # ==========================GETTING DATA=========================================
+  # ==========================GETTING DATA===================
   # What this code is doing is pulling in the data
   # getQueryString() is a function that takes a query string and turns it into
   # a list, which allows us to find the "data" item of that list.
@@ -120,8 +120,8 @@ shinyServer(function(input, output) {
       )
     ))
   })
-
-  # =================================PROCESSING DATA===============================
+  
+  # ====================PROCESSING DATA=========
   # This block pulls out the events log, which is a dataframe, within a
   # 1 element list within a 1 by 3 dataframe. So df is the frame,
   # events is an named column of df, which contains one element, which is a
@@ -129,9 +129,14 @@ shinyServer(function(input, output) {
   # variable called events. Note the difference between the events column of df
   # and our local events object (even though they are essentially the same data)
   
+  # if there is no data in the url, it uses a default base dataset
+  
   events <- reactive({
-    df()$events[[1]]
-  })
+    if('data' %in% names(getQueryString())){
+      events <- {df()$events[[1]]}
+    } else {
+      events <- read.csv("base.csv")
+    }})
   
   # Takes our events and cleans them up and adds some helpful columns
   # See file functions.R for more information.
