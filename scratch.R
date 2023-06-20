@@ -11,7 +11,8 @@ library(DT)
 source("functions.R")
 
 # load data (put in a doenetid - good doenetids to use are on slack)
-doenetid <- ""
+#doenetid <- "_TETkqoYS3slQaDwjqkMrX"
+doenetid <- "_IJg9jJIA8Ar99yfFETgiG"
 raw <-  stream_in(file(
   paste0(
     "https://www.doenet.org/api/getEventData.php?doenetId[]=",
@@ -20,8 +21,8 @@ raw <-  stream_in(file(
 ))
 
 # clean the data, test the functions
-#events <-  raw$events[[1]]
-events <- read.csv("base.csv")
+events <-  raw$events[[1]]
+#events <- read.csv("base.csv")
 #events <- events[1:100,]
 dates <- pull_dates(events)
 versions <- pull_versions(events)

@@ -64,13 +64,13 @@ problem_tab <-
         br(),
         plotOutput("wrong_plot")
       ),
-      tabPanel(
-        "Radar graph",
-        "This is a radar graph of progress across all problems - note this is a work in progress",
-        br(),
-        br(),
-        plotOutput("radar_graph")
-      ),
+      # tabPanel(
+      #   "Radar graph",
+      #   "This is a radar graph of progress across all problems - note this is a work in progress",
+      #   br(),
+      #   br(),
+      #   plotOutput("radar_graph")
+      # ),
       tabPanel(
         "Question-Specific Data",
         "This set of graphs shows the distribution of submissions for a specific question, as well as the distribution of how many students solved or attempted the question. At the bottom of the page is a graph displaying student scores vs number of submissions.",
@@ -100,12 +100,12 @@ problem_tab <-
           column(12, plotOutput("hist_subm_attempt")),
           column(12, plotOutput("hist_subm_version"))
         )
-      ),
-      tabPanel("Time per Question",
-               fluidRow(
-                 column(12, plotOutput("time_to_question_av")),
-                 column(12, plotOutput("time_to_question"))
-               ))
+      )#,
+      # tabPanel("Time per Question",
+      #          fluidRow(
+      #            column(12, plotOutput("time_to_question_av")),
+      #            column(12, plotOutput("time_to_question"))
+      #          ))
     )
   )
 

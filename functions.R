@@ -19,8 +19,8 @@ clean_events <- function(events, min_date, max_date) {
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time_person = timestamp - min(timestamp)) %>%
     ungroup() %>%
-    mutate(time_activity = timestamp - min(timestamp)) %>%
-    filter((timestamp > min_date) & (timestamp < max_date))
+    mutate(time_activity = timestamp - min(timestamp))# %>%
+    #filter((timestamp > min_date) & (timestamp < max_date))
   
   events <- # this separates the context, object, and result columns
     events %>%
@@ -90,7 +90,7 @@ summarize_events <- function(data) {
       activityVariantIndex
     ) %>%
     filter(verb == "submitted") %>% 
-    group_by(item, version_num, pageVariantIndex, activityVariantIndex) %>%
+    group_by(item, pageNumber, version_num, pageVariantIndex, activityVariantIndex) %>%
     mutate(avg = mean(itemCreditAchieved)) %>%
     ungroup() %>% 
     add_count(response, item, version_num, pageVariantIndex, activityVariantIndex)
@@ -110,6 +110,6 @@ pull_versions <- function(events) {
 }
 #================version_filter=================================================
 version_filter <- function(cleaned, input_version) {
-  out <- cleaned %>% filter(cleaned$version_num == input_version)
+  out <- cleaned #%>% filter(cleaned$version_num == input_version)
   return(out)
 }

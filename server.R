@@ -20,6 +20,7 @@ shinyServer(function(input, output, session) {
   # two, then the remaining 3 output IDs will be set to NULL and not shown
   # It feels like we could accomplish this with a loop, but after multiple
   # attempts, none of us have been successful.
+  
   output$rid <-
     renderUI({
       i <- 1
@@ -91,23 +92,39 @@ shinyServer(function(input, output, session) {
   # Second element is a message (typically empty right now)
   # Third is the list that contains the event log
   # df contains this 1 by 3 frame at the end of this block
-  df <- eventReactive(input$submit_extra | input$update, {
-    if (input$submit_extra != 0) {
-      end_of_link <- paste0(
-        "&doenetId[]=",
-        input$id1,
-        "&doenetId[]=",
-        input$id2,
-        "&doenetId[]=",
-        input$id3,
-        "&doenetId[]=",
-        input$id4,
-        "&doenetId[]=",
-        input$id5
-      )
-    } else {
-      end_of_link <- ""
-    }
+  # df <- eventReactive(input$submit_extra | input$update, {
+  #   if (input$submit_extra != 0) {
+  #     end_of_link <- paste0(
+  #       "&doenetId[]=",
+  #       input$id1,
+  #       "&doenetId[]=",
+  #       input$id2,
+  #       "&doenetId[]=",
+  #       input$id3,
+  #       "&doenetId[]=",
+  #       input$id4,
+  #       "&doenetId[]=",
+  #       input$id5
+  #     )
+  #   } else {
+  #     end_of_link <- ""
+  #   }
+  #   stream_in(file(
+  #     paste0(
+  #       "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+  #       #doenetid, # this is for local work
+  #       #"",
+  #       getQueryString()[["data"]], # this is the web version
+  #       "&code=",
+  #       getQueryString()[["code"]],
+  #       end_of_link
+  #     )
+  #   ))
+  # })
+  
+  
+  df <- reactive({
+    withProgress(message = 'Loading Data', {
     stream_in(file(
       paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
@@ -115,10 +132,9 @@ shinyServer(function(input, output, session) {
         #"",
         getQueryString()[["data"]], # this is the web version
         "&code=",
-        getQueryString()[["code"]],
-        end_of_link
+        getQueryString()[["code"]]
       )
-    ))
+    ))})
   })
   
   # ====================PROCESSING DATA=========
@@ -157,7 +173,10 @@ shinyServer(function(input, output, session) {
   
   # Input from date slider determines which dates are included in the set.
   cleaned_versions <- reactive({
+    #req(events())
+    withProgress(message = 'Analyzing Data', {
     clean_events(events(), input$date_range[1], input$date_range[2])
+    })
   })
   
   summary_data_versions <- reactive({
@@ -285,16 +304,22 @@ shinyServer(function(input, output, session) {
   )
   # This displays a histogram of overall scores on the activity
   # bins = nrow(distinct())
-  output$hist_total <- renderPlot(
+  output$hist_total <- renderPlot({
+
+    shiny::validate(
+      need(summary_data(), "Sorry, there is no data for you requested combination. 
+                      Please change your input selections"
+      )
+    )
+    
     summary_data() %>%
-      group_by(userId) %>%
-      filter(pageCreditAchieved != "-Inf") %>%
+      group_by(userId, pageNumber) %>%
       summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
-      #mutate(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
-      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment")
-  )
+      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment, By Page") +
+      facet_wrap(~pageNumber)
+  })
   
   # ========================ATTEMPT BASED PLOTS====================================
   # This displays a plot of average submissions per question
@@ -421,18 +446,38 @@ shinyServer(function(input, output, session) {
   # ====================WRONG ANSWER BASED PLOTS===================================
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
-    summary_data() %>%
-      filter(!is.na(response)) %>%
-      group_by(item) %>%
-      filter(itemCreditAchieved < 1) %>%
-      ggplot(aes(
-        x = as.factor(response),
-        y = n,
-        fill = as.factor(response)
-      )) +
+    cleaned_versions() %>%
+      filter(verb == "submitted" |
+               verb == "answered" |
+               verb == "selected") %>% # selected are choice inputs
+      select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
+      filter(componentName != "/aboutSelf") %>%
+      filter(!is.na(pageNumber)) %>% 
+      filter(!is.na(item)) %>% 
+      filter(responseText != "NULL") %>% 
+      filter(itemCreditAchieved < 1) %>% 
+      group_by(pageNumber, item) %>% 
+      count(responseText) %>%
+      filter(n>=10) %>% 
+      ungroup() %>% 
+      ggplot(aes(x = as.character(responseText), y = n)) +
       geom_col() +
-      facet_wrap( ~ item, scales = "free") +
-      labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
+      facet_grid(pageNumber ~ item, scales = "free") +
+      labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
+      coord_flip()
+    
+    # summary_data() %>%
+    #   filter(!is.na(response)) %>%
+    #   group_by(item) %>%
+    #   filter(itemCreditAchieved < 1) %>%
+    #   ggplot(aes(
+    #     x = as.factor(response),
+    #     y = n,
+    #     fill = as.factor(response)
+    #   )) +
+    #   geom_col() +
+    #   facet_wrap( ~ item, scales = "free") +
+    #   labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
   })
   
   # ====================ALL ANSWER PLOTS===================================
@@ -441,12 +486,21 @@ shinyServer(function(input, output, session) {
       filter(verb == "submitted" |
                verb == "answered" |
                verb == "selected") %>% # selected are choice inputs
-      select(userId, response, responseText, item, componentName) %>%
+      select(item, pageNumber, componentName, responseText) %>%
       filter(componentName != "/aboutSelf") %>%
-      ggplot(aes(x = as.character(responseText))) +
-      geom_bar() +
-      facet_wrap(~ componentName, scales = "free") +
-      labs(x = "Response", y = "Frequency") +
+      filter(!is.na(pageNumber)) %>% 
+      filter(!is.na(item)) %>% 
+      filter(responseText != "NULL") %>% 
+      filter(pageNumber == 4) %>% 
+      #unnest(responseText) %>% 
+      group_by(item, pageNumber, componentName) %>% 
+      count(responseText) %>%
+      filter(n >= 10) %>% 
+      ungroup() %>%
+      ggplot(aes(x = as.character(responseText), y = n)) +
+      geom_col() +
+      facet_wrap( ~ pageNumber + componentName, scales = "free") +
+      labs(x = "Response", y = "Frequency (if more than 10 times)") +
       coord_flip()
   })
   
@@ -479,21 +533,24 @@ shinyServer(function(input, output, session) {
   
   
   # ================VERSION COMPARISON PLOTS=====================
-  
   # This one just does a bar graph of average score for each question
   output$problem_avgs_version <- renderPlot({
     summary_data_versions() %>%
-      group_by(version_num) %>%
-      # arrange(avg) %>%
+      group_by(userId, pageNumber, item) %>% 
+      filter(!is.na(itemCreditAchieved)) %>% 
+      slice_max(itemCreditAchieved, n = 1) %>% 
+      ungroup() %>% 
       ggplot(aes(
-        x = item,
+        x = as.factor(item),
         y = avg,
         fill = as.factor(version_num)
       )) +
-      geom_col(stat = "identity", position = "dodge") +
-      labs(x = "problem", y = "average score", title = "average score by problem by version") +
+      geom_col(position = "dodge") +
+      labs(x = "Problem", y = "Average score", title = "Average score by Problem by Version for Each Page", fill = "Version") +
       # guides(fill=guide_legend(title="Version")) +
-      ylim(c(0, 1))
+      ylim(c(0, 1))+
+      #facet_wrap( ~ pageNumber, labeller=label_bquote(.(levels(as.factor(summary_data_versions$pageNumber)))))
+      facet_wrap( ~ pageNumber, labeller=label_bquote(Page ~ .(pageNumber)))
   })
   # This is time plots faceted by version for person version of graph
   output$time_plot_person_version <- renderPlot({
@@ -521,12 +578,12 @@ shinyServer(function(input, output, session) {
   # bins = nrow(distinct(summary_data() , score))
   output$hist_total_version <- renderPlot({
     summary_data_versions() %>%
-      group_by(userId, version_num) %>%
+      group_by(userId, version_num, pageNumber) %>%
       summarize(total = max(pageCreditAchieved, na.rm = TRUE)) %>%
       ggplot(aes(x = total)) +
       geom_histogram() +
-      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment") +
-      facet_wrap( ~ version_num)
+      labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment (Columns are version, rows are page number") +
+      facet_grid(pageNumber ~ version_num)
   })
   
   #====================TIME TO QUESTION PLOTS===================
