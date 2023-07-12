@@ -38,7 +38,9 @@ summary_data <- summarize_events(cleaned)
 ###########################################
 
 
-# the function below extracts the exact id from the url within doenet
+# the implementations below are different ways of extracting the ids
+# where code1 and code2 are not fully functional with code2 having a possible
+# in infinite loop. Code3 works but it needs more urls for testing purposes
 library(stringr)
 
 extract_ids_code1 <- function(url) {
