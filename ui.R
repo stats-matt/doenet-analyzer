@@ -33,14 +33,7 @@ shinyUI(fluidPage(
         step = 1
       ),
       # actionButton("gennum","next"),
-      
-      # hard-coded ui for doenet ids
-      uiOutput("rid"),
-      uiOutput("id1"),
-      uiOutput("id2"),
-      uiOutput("id3"),
-      uiOutput("id4"),
-      uiOutput("id5"),
+      selectInput("dropdown", "Select an option:", choices = NULL),
       actionButton("submit_extra", "Submit"),
       # slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),

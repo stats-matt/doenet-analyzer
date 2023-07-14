@@ -3,8 +3,11 @@ library(tidyverse)
 library(jsonlite)
 library(anytime)
 library(dplyr)
+library(tidyr)
 library(scales)
 library(DT)
+library(stringr)
+library(rstudioapi)
 
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
@@ -122,20 +125,76 @@ shinyServer(function(input, output, session) {
   #   ))
   # })
   
+  #===============other implementation==========================================
+  
+  url <- getwd()
+  
+  extract_ids_code3 <- function(url) {
+    url_1 <- gsub("&code=.*", "", as.character(url))
+    url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+    url_3 <- sub("data=", "&data=", url_2)
+    
+    ids <- strsplit(url_3, "&data=")[[1]][-1]
+    
+    return(ids)
+  }
+  
+  # the following function generates a data frame with the appropriate amount
+  # of columns for the number of IDs
+  hashmap_ids <- function(ids) {
+    hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids), 
+                                 dimnames = list(NULL, paste0("key", seq_along(ids)))))
+    hashmap[1, ] <- ids
+    
+    return(hashmap)
+  }
+  
+  # Convert the list to a data frame
+  ids_df <- data.frame(ids = extract_ids_code3(url))
+  
+  # Create the hashmap as a data frame
+  hashmap <- hashmap_ids(ids_df$ids)
+  
+  # Apply dplyr functions on the data frame
+  filtered_data <- ids_df %>% 
+    select(ids) %>% 
+    distinct()
+  
+  # Reactively update df based on the selected ID
   
   df <- reactive({
     withProgress(message = 'Loading Data', {
-    stream_in(file(
-      paste0(
+      selected_key <- input$dropdown
+      
+      # Fetch the corresponding data from the hashmap
+      selected_id <- hashmap$ids[hashmap$key == selected_key]
+      
+      # Use selected_id in the URL for fetching data
+      url <- paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        #doenetid, # this is for local work
-        #"",
-        getQueryString()[["data"]], # this is the web version
+        selected_id,
         "&code=",
         getQueryString()[["code"]]
       )
-    ))})
+      
+      data <- stream_in(file(url))
+      return(data)
+    })
   })
+  
+  # df <- reactive({
+  #   withProgress(message = 'Loading Data', {
+  #   stream_in(file(
+  #     paste0(
+  #       "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+  #       #doenetid, # this is for local work
+  #       #"",
+  #       getQueryString()[["data"]], # this is the web version
+  #       "&code=",
+  #       getQueryString()[["code"]]
+  #     )
+  #   ))})
+  # })
   
   # ====================PROCESSING DATA=========
   # This block pulls out the events log, which is a dataframe, within a

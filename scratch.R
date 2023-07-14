@@ -41,7 +41,9 @@ summary_data <- summarize_events(cleaned)
 # the implementations below are different ways of extracting the ids
 # where code1 and code2 are not fully functional with code2 having a possible
 # in infinite loop. Code3 works but it needs more urls for testing purposes
+# skip to line 84
 library(stringr)
+library(rstudioapi)
 
 extract_ids_code1 <- function(url) {
   start_index <- str_locate(url, "data=")[,2]
@@ -79,8 +81,43 @@ extract_ids_code2 <- function(url) {
   
   return(ids)
 }
+
+extract_ids_code4 <- function(url) {
+  url_1 <- gsub("&code=.*", 
+                "", 
+                as.character(url))
+  url_2 <- sub('.*\\?', '', url_1)
+  url_3 <- sub("data=", 
+               "&data=", 
+               url_2)
+  
+  ids <- strsplit(url_3, 
+                  "&data=")[[1]][-1]
+  
+  return(ids)
+}
+hashmap_id_failedattempt <- function(ids) {
+  hashmap <- data.frame(matrix(nrow = 1, 
+                               ncol = length(ids), 
+                               dimnames = list(NULL, 
+                                               paste0("Doenet id", 
+                                                      seq_along(ids)))))
+  hashmap[1, ] <- ids
+  
+  return(hashmap)
+}
+
+
+
+# the follwoing functions are a work in progress the functions above are scrap
+# work
+
+url <- "https://doenet.shinyapps.io/analyzer/?data=_Y8rhJ0x5KzbEF4cc73RFH&data=_szGjThMMAaq0gmXaig9nq&code=4k6dSxGZ0BSztlexusbmU"
+
+# the following code generates a list containing the doent ids as type of string
+# good attempt but list is not a friendly type with dplyr package
 extract_ids_code3 <- function(url) {
-  url_1 <- gsub("&code=.*", "", url)
+  url_1 <- gsub("&code=.*", "", as.character(url))
   url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
   url_3 <- sub("data=", "&data=", url_2)
   
@@ -89,9 +126,135 @@ extract_ids_code3 <- function(url) {
   return(ids)
 }
 
-url <- "https://doenet.shinyapps.io/analyzer/?data=_Y8rhJ0x5KzbEF4cc73RFH&data=_szGjThMMAaq0gmXaig9nq&code=4k6dSxGZ0BSztlexusbmU"
-ids <- extract_ids(url)
-print(ids)
+# the following function generates a hashmap with the appropriate amount
+# of keys for the number of ids good attempt but list is not a friendly type
+# with dplyer package
+hashmap_ids <- function(ids) {
+  hashmap <- list()
+  for (index in seq_along(ids)) {
+    key <- paste0("key", index)
+    hashmap[[key]] <- ids[[index]]
+  }
+}
+
+
+
+# Fetch the IDs from the extract_ids_code3 function
+ids <- extract_ids_code3(url)
+
+# Create the hashmap
+hashmap <- hashmap_ids(ids)
+
+# The following code chunk dynamically creates a dropdown depending on the length
+# from the output of extract_ids_code3. The object df accepts a selected course
+# id and process the information relative to that course id
+
+ui <- fluidPage(
+  selectInput("dropdown", 
+              "Select an option:", 
+              choices = NULL),
+  tableOutput("data_table")
+)
+
+server <- function(input, output, session) {
+  my_list <- names(hashmap)
+  
+  observe({
+    updateSelectInput(session, 
+                      "dropdown", 
+                      choices = my_list)
+  })
+}
+  
+# Reactively update df based on the selected ID
+
+df <- reactive({
+  withProgress(message = 'Loading Data', {
+    selected_key <- input$dropdown
+    
+    # Fetch the corresponding data from the hashmap
+    selected_id <- hashmap[[selected_key]]
+    
+    # Use selected_id in the URL for fetching data
+    url <- paste0(
+      "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+      selected_id,
+      "&code=",
+      getQueryString()[["code"]]
+    )
+    
+    data <- stream_in(file(url))
+    return(data)
+  })
+})
+
+
+#===============other implementation===========================================
+# the following function generates a data frame with the appropriate amount
+# of columns for the number of IDs
+
+# the following code generates a character vector containing the document IDs
+extract_ids_code3 <- function(url) {
+  url_1 <- gsub("&code=.*", "", as.character(url))
+  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_3 <- sub("data=", "&data=", url_2)
+  
+  ids <- strsplit(url_3, "&data=")[[1]][-1]
+  
+  return(ids)
+}
+
+hashmap_ids <- function(ids) {
+  hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids), 
+                               dimnames = list(NULL, paste0("key", seq_along(ids)))))
+  hashmap[1, ] <- ids
+  
+  return(hashmap)
+}
+
+# Convert the list to a data frame
+ids_df <- data.frame(ids = extract_ids_code3(url))
+
+# Create the hashmap as a data frame
+hashmap <- hashmap_ids(ids_df$ids)
+
+# Apply dplyr functions on the data frame
+filtered_data <- ids_df %>% 
+  select(ids) %>% 
+  distinct()
+
+# Reactively update df based on the selected ID
+
+df <- reactive({
+  withProgress(message = 'Loading Data', {
+    selected_key <- input$dropdown
+    
+    # Fetch the corresponding data from the hashmap
+    selected_id <- hashmap$ids[hashmap$key == selected_key]
+    
+    # Use selected_id in the URL for fetching data
+    url <- paste0(
+      "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+      selected_id,
+      "&code=",
+      getQueryString()[["code"]]
+    )
+    
+    data <- stream_in(file(url))
+    return(data)
+  })
+})
+
+
+
+
+
+
+
+
+
+
+
 
 
 
