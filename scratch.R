@@ -248,10 +248,144 @@ df <- reactive({
 
 
 
+# install.packages("devtools")
+devtools::install_github("r-lib/conflicted")
+conflicted::conflicts_prefer(dplyr::select())
 
 
+#====================Testing Shiny Output=======================================
+library(shiny)
+library(tidyverse)
+library(jsonlite)
+library(anytime)
+library(dplyr)
+library(DT)
+
+extract_ids_code3 <- function(queryText) {
+  url_1 <- gsub("&code=.*", "", queryText)
+  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_3 <- sub("data=", "&data=", url_2)
+  
+  ids <- strsplit(url_3, "&data=")[[1]][-1]
+  
+  return(ids)
+}
+
+hashmap_ids <- function(ids) {
+  hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids),
+                               dimnames = list(NULL, paste0("key", seq_along(ids)))))
+  hashmap[1, ] <- ids
+  
+  return(hashmap)
+}
+
+shinyApp(
+  ui = fluidPage(
+    verbatimTextOutput("query")
+  ),
+  
+  server = function(input, output, session) {
+    output$query <- renderText({
+      query <- getQueryString()
+      queryText <- paste(names(query), query,
+                         sep = "=", collapse=", ")
+      paste("Your query string is:\n", queryText, 
+            "\n",
+            "The hashmap contains the id:\n",
+            paste(extract_ids_code3(queryText), collapse = ", "))
+    })
+  }
+)
+
+#================Final server integration step==================================
+library(shiny)
+library(tidyverse)
+library(jsonlite)
+library(anytime)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(DT)
+library(stringr)
+library(rstudioapi)
+
+extract_ids_code3 <- function(queryText) {
+  url_1 <- gsub("&code=.*", "", queryText)
+  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_3 <- sub("data=", "&data=", url_2)
+  
+  ids <- strsplit(url_3, "&data=")[[1]][-1]
+  
+  return(ids)
+}
+
+hashmap_ids <- function(ids) {
+  if (length(ids) > 0) {
+    course_ids <- paste("Course ID", seq_along(ids))
+    hashmap <- data.frame(course_id = ids, course_id_display = course_ids)
+  } else {
+    hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
+  }
+  
+  return(hashmap)
+}
+
+shinyApp(
+  ui = fluidPage(
+    verbatimTextOutput("query"),
+    selectInput("dropdown", "Select an option:", choices = NULL)
+  ),
+  
+  server = function(input, output, session) {
+    output$query <- renderText({
+      query <- getQueryString()
+      queryText <- paste(names(query), query,
+                         sep = "=", collapse = ", ")
+      ids <- extract_ids_code3(queryText)
+      hashmap <- hashmap_ids(ids)
+      
+      paste("Your query string is:\n", queryText, 
+            "\n",
+            "The hashmap contains the id:\n",
+            paste(ids, collapse = ", "))
+    })
+    
+    observe({
+      queryText <- paste(names(getQueryString()), getQueryString(),
+                         sep = "=", collapse = ", ")
+      ids <- extract_ids_code3(queryText)
+      hashmap <- hashmap_ids(ids)
+      
+      updateSelectInput(session, "dropdown", choices = hashmap$course_id_display)
+    })
+    
+    df <- reactive({
+      withProgress(message = 'Loading Data', {
+        selected_display <- input$dropdown
+        
+        hashmap <- hashmap_ids(extract_ids_code3(getQueryString()))
+        selected_id <- hashmap$course_id[hashmap$course_id_display == selected_display]
+        
+        if (length(selected_id) > 0) {
+          url <- paste0(
+            "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+            selected_id,
+            "&code=",
+            getQueryString()[["code"]]
+          )
+          
+          data <- stream_in(file(url))
+          return(data)
+        } else {
+          return(NULL)
+        }
+      })
+    })
+  }
+)
 
 
+    
 
 
 

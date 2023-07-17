@@ -12,6 +12,10 @@ library(rstudioapi)
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
 
+# install.packages("devtools")
+devtools::install_github("r-lib/conflicted")
+conflicted::conflicts_prefer(dplyr::select())
+
 shinyServer(function(input, output, session) {
   source("./functions.R")
   
@@ -125,12 +129,10 @@ shinyServer(function(input, output, session) {
   #   ))
   # })
   
-  #===============other implementation==========================================
+  #===============Testing Dynamic df++==========================================
   
-  url <- getwd()
-  
-  extract_ids_code3 <- function(url) {
-    url_1 <- gsub("&code=.*", "", as.character(url))
+  extract_ids_code3 <- function(queryText) {
+    url_1 <- gsub("&code=.*", "", queryText)
     url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
     url_3 <- sub("data=", "&data=", url_2)
     
@@ -139,46 +141,46 @@ shinyServer(function(input, output, session) {
     return(ids)
   }
   
-  # the following function generates a data frame with the appropriate amount
-  # of columns for the number of IDs
   hashmap_ids <- function(ids) {
-    hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids), 
-                                 dimnames = list(NULL, paste0("key", seq_along(ids)))))
-    hashmap[1, ] <- ids
+    if (length(ids) > 0) {
+      course_ids <- paste("Course ID", seq_along(ids))
+      hashmap <- data.frame(course_id = ids, course_id_display = course_ids)
+    } else {
+      hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
+    }
     
     return(hashmap)
   }
   
-  # Convert the list to a data frame
-  ids_df <- data.frame(ids = extract_ids_code3(url))
-  
-  # Create the hashmap as a data frame
-  hashmap <- hashmap_ids(ids_df$ids)
-  
-  # Apply dplyr functions on the data frame
-  filtered_data <- ids_df %>% 
-    select(ids) %>% 
-    distinct()
-  
-  # Reactively update df based on the selected ID
+  observe({
+    queryText <- paste(names(getQueryString()), getQueryString(),
+                       sep = "=", collapse = ", ")
+    ids <- extract_ids_code3(queryText)
+    hashmap <- hashmap_ids(ids)
+    
+    updateSelectInput(session, "dropdown", choices = hashmap$course_id_display)
+  })
   
   df <- reactive({
     withProgress(message = 'Loading Data', {
-      selected_key <- input$dropdown
+      selected_display <- input$dropdown
       
-      # Fetch the corresponding data from the hashmap
-      selected_id <- hashmap$ids[hashmap$key == selected_key]
+      hashmap <- hashmap_ids(extract_ids_code3(getQueryString()))
+      selected_id <- hashmap$course_id[hashmap$course_id_display == selected_display]
       
-      # Use selected_id in the URL for fetching data
-      url <- paste0(
-        "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        selected_id,
-        "&code=",
-        getQueryString()[["code"]]
-      )
-      
-      data <- stream_in(file(url))
-      return(data)
+      if (length(selected_id) > 0) {
+        url <- paste0(
+          "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+          selected_id,
+          "&code=",
+          getQueryString()[["code"]]
+        )
+        
+        data <- stream_in(file(url))
+        return(data)
+      } else {
+        return(NULL)
+      }
     })
   })
   
