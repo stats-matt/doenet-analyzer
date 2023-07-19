@@ -12,9 +12,6 @@ library(rstudioapi)
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
 
-# install.packages("devtools")
-devtools::install_github("r-lib/conflicted")
-conflicted::conflicts_prefer(dplyr::select())
 
 shinyServer(function(input, output, session) {
   source("./functions.R")
@@ -128,8 +125,12 @@ shinyServer(function(input, output, session) {
   #     )
   #   ))
   # })
-  
-  #===============Testing Dynamic df++==========================================
+
+  getQueryText <- reactive({
+    query <- getQueryString()
+    queryText <- paste(names(query), query, sep = "=", collapse = ", ")
+    return(queryText)
+  })
   
   extract_ids_code3 <- function(queryText) {
     url_1 <- gsub("&code=.*", "", queryText)
@@ -144,17 +145,16 @@ shinyServer(function(input, output, session) {
   hashmap_ids <- function(ids) {
     if (length(ids) > 0) {
       course_ids <- paste("Course ID", seq_along(ids))
-      hashmap <- data.frame(course_id = ids, course_id_display = course_ids)
+      hashmap <- data.frame(course_id = ids, course_id_display = course_ids, stringsAsFactors = FALSE)
     } else {
       hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
     }
-    
+
     return(hashmap)
   }
   
   observe({
-    queryText <- paste(names(getQueryString()), getQueryString(),
-                       sep = "=", collapse = ", ")
+    queryText <- isolate(getQueryText())
     ids <- extract_ids_code3(queryText)
     hashmap <- hashmap_ids(ids)
     
@@ -165,38 +165,45 @@ shinyServer(function(input, output, session) {
     withProgress(message = 'Loading Data', {
       selected_display <- input$dropdown
       
-      hashmap <- hashmap_ids(extract_ids_code3(getQueryString()))
+      hashmap <- hashmap_ids(extract_ids_code3(getQueryText()))
       selected_id <- hashmap$course_id[hashmap$course_id_display == selected_display]
       
-      if (length(selected_id) > 0) {
-        url <- paste0(
+      if (is.null(selected_id)) {
+        # Load default dataset when no option is selected
+        default_url <- paste0(
+          "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+          getQueryString()[["data"]], # this is the web version
+          "&code=",
+          getQueryString()[["code"]]
+        )
+        data <- stream_in(file(default_url))
+      } else {
+        # Load data based on selected option
+        selected_url <- paste0(
           "https://www.doenet.org/api/getEventData.php?doenetId[]=",
           selected_id,
           "&code=",
           getQueryString()[["code"]]
         )
-        
-        data <- stream_in(file(url))
-        return(data)
-      } else {
-        return(NULL)
+        data <- stream_in(file(selected_url))
       }
+      
+      return(data)
     })
   })
   
-  # df <- reactive({
+  # df_original <- reactive({
   #   withProgress(message = 'Loading Data', {
-  #   stream_in(file(
-  #     paste0(
-  #       "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-  #       #doenetid, # this is for local work
-  #       #"",
-  #       getQueryString()[["data"]], # this is the web version
-  #       "&code=",
-  #       getQueryString()[["code"]]
-  #     )
-  #   ))})
+  #     stream_in(file(
+  #       paste0(
+  #         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+  #         getQueryString()[["data"]], # this is the web version
+  #         "&code=",
+  #         getQueryString()[["code"]]
+  #       )
+  #     ))})
   # })
+  
   
   # ====================PROCESSING DATA=========
   # This block pulls out the events log, which is a dataframe, within a
@@ -274,7 +281,7 @@ shinyServer(function(input, output, session) {
                 max(dates()))
     )
   })
-  
+
   
   # =========================DOWNLOADING DATA======================================
   # This gives allows the user to download the data shown in a csv file for their
