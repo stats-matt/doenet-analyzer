@@ -18,59 +18,6 @@ shinyServer(function(input, output, session) {
   
   # ==========PRE CLEANING INPUTS==========================
   
-  # maximum 5 ids to compare/ hard coded
-  # So this code is going through and adding one extra Doenet ID entry box
-  # for each one requested in input$numid. If (for example) you only request
-  # two, then the remaining 3 output IDs will be set to NULL and not shown
-  # It feels like we could accomplish this with a loop, but after multiple
-  # attempts, none of us have been successful.
-  
-  output$rid <-
-    renderUI({
-      i <- 1
-      j <- input$numid
-      if (i <= j) {
-        output$id1 <- renderUI({
-          textInput("id1", "Doenet ID 1")
-        })
-        i <- i + 1
-      } else {
-        output$id1 <- NULL
-      }
-      if (i <= j) {
-        output$id2 <- renderUI({
-          textInput("id2", "Doenet ID 2")
-        })
-        i <- i + 1
-      } else {
-        output$id2 <- NULL
-      }
-      if (i <= j) {
-        output$id3 <- renderUI({
-          textInput("id3", "Doenet ID 3")
-        })
-        i <- i + 1
-      } else {
-        output$id3 <- NULL
-      }
-      if (i <= j) {
-        output$id4 <- renderUI({
-          textInput("id4", "Doenet ID 4")
-        })
-        i <- i + 1
-      } else {
-        output$id4 <- NULL
-      }
-      if (i <= j) {
-        output$id5 <- renderUI({
-          textInput("id5", "Doenet ID 5")
-        })
-        i <- i + 1
-      } else {
-        output$id5 <- NULL
-      }
-    })
-  
   # Slider for time in the time plots
   output$time_slider <-
     renderUI({
@@ -96,36 +43,7 @@ shinyServer(function(input, output, session) {
   # Second element is a message (typically empty right now)
   # Third is the list that contains the event log
   # df contains this 1 by 3 frame at the end of this block
-  # df <- eventReactive(input$submit_extra | input$update, {
-  #   if (input$submit_extra != 0) {
-  #     end_of_link <- paste0(
-  #       "&doenetId[]=",
-  #       input$id1,
-  #       "&doenetId[]=",
-  #       input$id2,
-  #       "&doenetId[]=",
-  #       input$id3,
-  #       "&doenetId[]=",
-  #       input$id4,
-  #       "&doenetId[]=",
-  #       input$id5
-  #     )
-  #   } else {
-  #     end_of_link <- ""
-  #   }
-  #   stream_in(file(
-  #     paste0(
-  #       "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-  #       #doenetid, # this is for local work
-  #       #"",
-  #       getQueryString()[["data"]], # this is the web version
-  #       "&code=",
-  #       getQueryString()[["code"]],
-  #       end_of_link
-  #     )
-  #   ))
-  # })
-  
+
   getQueryText <- reactive({
     query <- getQueryString()
     queryText <- paste(names(query), query, sep = "=", collapse = ", ")
@@ -196,15 +114,15 @@ shinyServer(function(input, output, session) {
     updateSelectizeInput(session, "dropdown", choices = hashmap$course_id_display)
   })
   # Create a reactive value to store the loaded data
+  # Create a reactive value to store the loaded data
   df <- reactive({
-    withProgress(message = "Doenet analyzer is loading your data,
-                 please be wait patiently.", {
+    withProgress(message = "Doenet analyzer is loading your data, please be patient.", {
       selected_display <- input$dropdown
       b <- extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
       c <- df_original_json(b)
-      d <- extract_ids_code3(getQueryText())
-      hashmap <- hashmap_df_json(c, d)  # Call df_list() as a reactive expression
-      selected_id <- hashmap[[selected_display]]
+      hashmap <- hashmap_df_json(c, b)  # Use 'b' instead of 'd' to pass the course IDs directly
+      
+      selected_id <- hashmap$json_data[[selected_display]]  # Retrieve the selected data from the hashmap
       
       if (is.null(selected_id)) {
         # Load default dataset when no option is selected
@@ -216,19 +134,14 @@ shinyServer(function(input, output, session) {
         )
         data <- stream_in(file(default_url))
       } else {
-        # Load data based on selected option
-        selected_url <- paste0(
-          "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-          selected_id,
-          "&code=",
-          getQueryString()[["code"]]
-        )
-        data <- stream_in(file(selected_url))
+        # Use the selected data from the hashmap
+        data <- selected_id
       }
       
       return(data)
     })
   })
+  
   
   # df_original <- reactive({
   #   withProgress(message = 'Loading Data', {
