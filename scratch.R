@@ -7,6 +7,10 @@ library(jsonlite)
 library(anytime)
 library(dplyr)
 library(DT)
+install.packages("promises")
+install.packages("future")
+library(promises)
+library(future)
 
 source("functions.R")
 
@@ -558,6 +562,16 @@ df <- reactive({
                  })
 })
 
-
+# df_original <- reactive({
+#   withProgress(message = 'Loading Data', {
+#     stream_in(file(
+#       paste0(
+#         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+#         getQueryString()[["data"]], # this is the web version
+#         "&code=",
+#         getQueryString()[["code"]]
+#       )
+#     ))})
+# })
 
 
