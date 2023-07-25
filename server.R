@@ -527,19 +527,18 @@ shinyServer(function(input, output, session) {
                verb == "answered" |
                verb == "selected") %>% # selected are choice inputs
       select(item, pageNumber, componentName, responseText) %>%
-      filter(componentName != "/aboutSelf") %>%
       filter(!is.na(pageNumber)) %>% 
       filter(!is.na(item)) %>% 
       filter(responseText != "NULL") %>% 
-      filter(pageNumber == 4) %>% 
+      filter(responseText != "＿") %>% 
       #unnest(responseText) %>% 
-      group_by(item, pageNumber, componentName) %>% 
+      group_by(item, pageNumber) %>% 
       count(responseText) %>%
       filter(n >= 10) %>% 
       ungroup() %>%
       ggplot(aes(x = as.character(responseText), y = n)) +
       geom_col() +
-      facet_wrap( ~ pageNumber + componentName, scales = "free") +
+      facet_wrap(pageNumber ~ item, scales = "free") +
       labs(x = "Response", y = "Frequency (if more than 10 times)") +
       coord_flip()
   })
