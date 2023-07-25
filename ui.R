@@ -23,25 +23,12 @@ shinyUI(fluidPage(
       downloadButton("downloadData", "Download Data"),
       # h1("Compare experiments:"),
       # textInput("extra_id", "Extra DoenetID"),
-      # actionButton("submit_extra", "Submit"),
-      numericInput(
-        "numid",
-        "Number of Doenet IDs",
-        value = 1,
-        min = 1,
-        max = 5,
-        step = 1
-      ),
       # actionButton("gennum","next"),
-      
-      # hard-coded ui for doenet ids
-      uiOutput("rid"),
-      uiOutput("id1"),
-      uiOutput("id2"),
-      uiOutput("id3"),
-      uiOutput("id4"),
-      uiOutput("id5"),
-      actionButton("submit_extra", "Submit"),
+      selectInput("dropdown", 
+                  "Select an option:", 
+                  choices = NULL,
+                  selectize = FALSE),
+      # actionButton("submit_extra", "Submit"),
       # slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),
       uiOutput("time_slider"),
