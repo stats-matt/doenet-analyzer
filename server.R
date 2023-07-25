@@ -494,6 +494,7 @@ shinyServer(function(input, output, session) {
       filter(!is.na(pageNumber)) %>% 
       filter(!is.na(item)) %>% 
       filter(responseText != "NULL") %>% 
+      filter(responseText != "＿") %>% 
       filter(itemCreditAchieved < 1) %>% 
       group_by(pageNumber, item) %>% 
       count(responseText) %>%

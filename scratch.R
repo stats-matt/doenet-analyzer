@@ -7,8 +7,8 @@ library(jsonlite)
 library(anytime)
 library(dplyr)
 library(DT)
-install.packages("promises")
-install.packages("future")
+#install.packages("promises")
+#install.packages("future")
 library(promises)
 library(future)
 
@@ -16,7 +16,7 @@ source("functions.R")
 
 # load data (put in a doenetid - good doenetids to use are on slack)
 #doenetid <- "_TETkqoYS3slQaDwjqkMrX"
-doenetid <- "_IJg9jJIA8Ar99yfFETgiG"
+doenetid <- "_PY82WGbGMv9FIVDzJdxgZ"
 raw <-  stream_in(file(
   paste0(
     "https://www.doenet.org/api/getEventData.php?doenetId[]=",
