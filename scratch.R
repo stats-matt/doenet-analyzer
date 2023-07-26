@@ -12,11 +12,15 @@ install.packages("future")
 library(promises)
 library(future)
 
+install.packages("memoise")
+library(memoise)
+
+
 source("functions.R")
 
 # load data (put in a doenetid - good doenetids to use are on slack)
 #doenetid <- "_TETkqoYS3slQaDwjqkMrX"
-doenetid <- "_IJg9jJIA8Ar99yfFETgiG"
+doenetid <- "_PY82WGbGMv9FIVDzJdxgZ"
 raw <-  stream_in(file(
   paste0(
     "https://www.doenet.org/api/getEventData.php?doenetId[]=",
@@ -573,5 +577,127 @@ df <- reactive({
 #       )
 #     ))})
 # })
+
+
+#============================TEMP CODE==========================================
+getQueryText <- reactive({
+  query <- getQueryString()
+  queryText <- paste(names(query), query, sep = "=", collapse = ", ")
+  return(queryText)
+})
+extract_ids_code3 <- function(queryText) {
+  if (is.null(queryText)) {
+    return(character())
+  } else {
+    url_1 <- gsub("&code=.*", "", queryText)
+    url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+    url_3 <- sub("data=", "&data=", url_2)
+    ids <- strsplit(url_3, "&data=")[[1]][-1]
+    return(ids)
+  }
+}
+extract_values <- function(hashmap) {
+  values_list <- data.frame(course_id = hashmap$course_id)
+  return(values_list)
+}
+df_original_json <- function(hashmap) {
+  values_list <- extract_values(hashmap)
+  df_list <- list()
+  
+  for (value in values_list) {
+    url <- paste0(
+      "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+      value,
+      "&code=",
+      getQueryString()[["code"]]
+    )
+    
+    data <- stream_in(file(url))
+    
+    # Check if 'data' is not NULL before proceeding
+    if (!is.null(data)) {
+      df_list[[value]] <- data
+    }
+  }
+  
+  return(df_list)
+}
+hashmap_df_json <- function(df_list, ids) {
+  if (length(ids) > 0) {
+    course_ids <- paste("Course ID", seq_along(ids))
+    hashmap <- data.frame(json_data = df_list, selected_display = course_ids)
+  } else {
+    hashmap <- list()
+  }
+  
+  return(hashmap)  # Corrected the return statement to return hashmap
+}
+observe({
+  queryText <- isolate(getQueryText())
+  ids <- extract_ids_code3(queryText)
+  hashmap <- hashmap_ids(ids)
+  
+  updateSelectizeInput(session, "dropdown", choices = hashmap$course_id_display)
+})
+
+# Wrap the df_original_json function with memoise
+df_original_json_memo <- memoise(df_original_json)
+
+# Create a reactive value to store the loaded data
+df <- reactive({
+  withProgress(message = "Doenet analyzer is loading your data, please be patient.", {
+    selected_display <- input$dropdown
+    b <- extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
+    
+    # Use the memoized version of df_original_json directly
+    hashmap <- df_original_json_memo(b)
+    
+    selected_id <- hashmap$json_data[[selected_display]]  # Retrieve the selected data from the hashmap
+    
+    if (is.null(selected_id)) {
+      # Load default dataset when no option is selected
+      default_url <- paste0(
+        "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+        getQueryString()[["data"]], # this is the web version
+        "&code=",
+        getQueryString()[["code"]]
+      )
+      data <- stream_in(file(default_url))
+    } else {
+      # Use the selected data from the hashmap
+      data <- selected_id
+    }
+    
+    return(data)
+  })
+})
+
+
+#==========================Testing out reordering by frequency==================
+library(ggplot2)
+library(forcats)
+
+library(forcats)
+
+cleaned_versions %>%
+  filter(verb %in% c("submitted", "answered", "selected")) %>%
+  select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
+  filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
+  filter(responseText != "NULL" & responseText != "＿") %>%
+  filter(itemCreditAchieved < 1) %>% 
+  group_by(pageNumber, item, responseText) %>%  
+  summarise(n = n()) %>%  
+  filter(n >= 10) %>%
+  ungroup() %>% 
+  mutate(responseText = fct_reorder(
+    as.character(responseText),
+    n,
+    .desc = TRUE
+  ) %>% fct_rev()) %>%
+  ggplot(aes(x = responseText, y = n)) +
+  geom_col() +
+  facet_wrap(~ pageNumber + item, scales = "free") +
+  labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
+  coord_flip()
 
 
