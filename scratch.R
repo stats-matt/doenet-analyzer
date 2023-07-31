@@ -24,6 +24,11 @@ raw <-  stream_in(file(
   )
 ))
 
+
+
+
+
+
 # clean the data, test the functions
 events <-  raw$events[[1]]
 #events <- read.csv("base.csv")
@@ -116,7 +121,7 @@ hashmap_id_failedattempt <- function(ids) {
 # the follwoing functions are a work in progress the functions above are scrap
 # work
 
-url <- "https://doenet.shinyapps.io/analyzer/?data=_Y8rhJ0x5KzbEF4cc73RFH&data=_szGjThMMAaq0gmXaig9nq&code=4k6dSxGZ0BSztlexusbmU"
+url <- "https://doenet.shinyapps.io/analyzer/?data=AAA&data=BBB&data=CCC&data=DDD"
 
 # the following code generates a list containing the doent ids as type of string
 # good attempt but list is not a friendly type with dplyr package
@@ -129,6 +134,8 @@ extract_ids_code3 <- function(url) {
   
   return(ids)
 }
+
+extract_ids_code3(url)
 
 # the following function generates a hashmap with the appropriate amount
 # of keys for the number of ids good attempt but list is not a friendly type
