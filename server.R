@@ -48,6 +48,33 @@ shinyServer(function(input, output, session) {
     getQueryString()
   })
   
+  output$show_pulldown <- reactive({
+    length(unlist(query())) > 1
+  })
+  outputOptions(output, "show_pulldown", suspendWhenHidden = FALSE)
+  
+  observe({
+  query2 <- paste(query())
+  
+    updateSelectInput(
+      session = session,
+      inputId = "select",
+      choices = query2,
+    )
+  })
+  
+  # paste solves this!!!!
+  
+  # observe({
+  #   y_vals <- dummy_data %>% filter(x == input$col_x) %>% select(y)
+  #   
+  #   updateSelectInput(
+  #     session = session, 
+  #     inputId = "col_y",
+  #     choices = y_vals,
+  #   )
+  # })
+  
   load_data <- function(query) {
     tmp_events <- data.frame()
     for (i in 1:length(unlist(query))) {
@@ -60,11 +87,20 @@ shinyServer(function(input, output, session) {
       new_events <-  raw$events[[1]]
       tmp_events <- bind_rows(tmp_events, new_events)
     }
+    print(unlist(query()))
     return(tmp_events)
   }
   events <- reactive({
     load_data(query())
   })
+  
+  #if (observe(length(unlist(query()) > 1))) {
+  #  doenetId_list <- reactive({1:length(unlist(query()))})
+    #names(doenetId_list()) <- reactive({events()$doenetId %>% unique()})
+  #}
+  
+  
+
   
   # this is the hash method
   #
@@ -188,19 +224,7 @@ shinyServer(function(input, output, session) {
   # })
   
   
-  # df_original <- reactive({
-  #   withProgress(message = 'Loading Data', {
-  #     stream_in(file(
-  #       paste0(
-  #         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-  #         getQueryString()[["data"]], # this is the web version
-  #         "&code=",
-  #         getQueryString()[["code"]]
-  #       )
-  #     ))})
-  # })
-  
-  
+
   # ====================PROCESSING DATA=========
   # This block pulls out the events log, which is a dataframe, within a
   # 1 element list within a 1 by 3 dataframe. So df is the frame,

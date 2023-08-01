@@ -24,11 +24,13 @@ shinyUI(fluidPage(
       # h1("Compare experiments:"),
       # textInput("extra_id", "Extra DoenetID"),
       # actionButton("gennum","next"),
-      selectInput("dropdown", 
-                  "Select an option:", 
-                  choices = NULL,
-                  selectize = FALSE),
       # actionButton("submit_extra", "Submit"),
+      conditionalPanel(condition = "output.show_pulldown",
+      selectInput(
+        "select",
+        label = h3("Select box"),
+        choices = c()
+      )),
       # slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),
       uiOutput("time_slider"),
