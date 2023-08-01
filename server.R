@@ -54,26 +54,12 @@ shinyServer(function(input, output, session) {
   outputOptions(output, "show_pulldown", suspendWhenHidden = FALSE)
   
   observe({
-  query2 <- paste(query())
-  
     updateSelectInput(
       session = session,
       inputId = "select",
-      choices = query2,
+      choices = paste(query()),
     )
   })
-  
-  # paste solves this!!!!
-  
-  # observe({
-  #   y_vals <- dummy_data %>% filter(x == input$col_x) %>% select(y)
-  #   
-  #   updateSelectInput(
-  #     session = session, 
-  #     inputId = "col_y",
-  #     choices = y_vals,
-  #   )
-  # })
   
   load_data <- function(query) {
     tmp_events <- data.frame()
@@ -87,7 +73,6 @@ shinyServer(function(input, output, session) {
       new_events <-  raw$events[[1]]
       tmp_events <- bind_rows(tmp_events, new_events)
     }
-    print(unlist(query()))
     return(tmp_events)
   }
   events <- reactive({
