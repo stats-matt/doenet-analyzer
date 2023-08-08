@@ -8,6 +8,8 @@ library(scales)
 library(DT)
 library(stringr)
 library(rstudioapi)
+library(memoise)
+library(forcats)
 
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
@@ -44,14 +46,14 @@ shinyServer(function(input, output, session) {
   # df contains this 1 by 3 frame at the end of this block
   # Install and load the 'promises' package
   
-  # Takes the string of url and splices it to return a list of strings
+  # Turn off the possibility of displaying error
+  options(shiny.sanitize.errors = FALSE)
+  
   getQueryText <- reactive({
     query <- getQueryString()
     queryText <- paste(names(query), query, sep = "=", collapse = ", ")
     return(queryText)
   })
-  
-  # Takes in a list of strings and splices it to return a list of doenet id
   extract_ids_code3 <- function(queryText) {
     if (is.null(queryText)) {
       return(character())
@@ -63,27 +65,10 @@ shinyServer(function(input, output, session) {
       return(ids)
     }
   }
-  
-  # Stores a list of doenet ids and returns a data frame of doenet ids
-  hashmap_ids <- function(ids) {
-    if (length(ids) > 0) {
-      course_ids <- paste("Course ID", seq_along(ids))
-      hashmap <- data.frame(course_id = ids, course_id_display = course_ids, stringsAsFactors = FALSE)
-    } else {
-      hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
-    }
-    return(hashmap)
-  }
-  
-  # Takes in a data frame of doenet ids and returns a data frame of the doenet
-  # ids
   extract_values <- function(hashmap) {
     values_list <- data.frame(course_id = hashmap$course_id)
     return(values_list)
   }
-  
-  # Takes in a data frame of doenet ids and returns a list of api calls for the 
-  # json file of the doenet id
   df_original_json <- function(hashmap) {
     values_list <- extract_values(hashmap)
     df_list <- list()
@@ -106,9 +91,6 @@ shinyServer(function(input, output, session) {
     
     return(df_list)
   }
-  
-  # Takes in a list of api calls and returns a data frame with the api call and
-  # the course number
   hashmap_df_json <- function(df_list, ids) {
     if (length(ids) > 0) {
       course_ids <- paste("Course ID", seq_along(ids))
@@ -117,9 +99,36 @@ shinyServer(function(input, output, session) {
       hashmap <- list()
     }
     
-    return(hashmap)  # Corrected the return statement to return hashmap
+    return(hashmap)
   }
-  #Observe block to update dropdown choices
+  # Create a reactive value to store the loaded data
+  df <- eventReactive(input$dropdown, {
+    withProgress(message = "Doenet analyzer is loading your data, please be patient.", {
+      selected_display <- input$dropdown
+      b <- extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
+      
+      # Use the memoized version of df_original_json directly
+      hashmap <- df_original_json_memo(b)
+      
+      selected_id <- hashmap$json_data[[selected_display]]  # Retrieve the selected data from the hashmap
+      
+      if (is.null(selected_id)) {
+        # Load default dataset when no option is selected
+        default_url <- paste0(
+          "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+          getQueryString()[["data"]], # this is the web version
+          "&code=",
+          getQueryString()[["code"]]
+        )
+        data <- stream_in(file(default_url))
+      } else {
+        # Use the selected data from the hashmap
+        data <- selected_id
+      }
+      
+      return(data)
+    })
+  })
   observe({
     queryText <- isolate(getQueryText())
     ids <- extract_ids_code3(queryText)
@@ -127,40 +136,9 @@ shinyServer(function(input, output, session) {
     
     updateSelectizeInput(session, "dropdown", choices = hashmap$course_id_display)
   })
-  # Create a reactive value to store the loaded data
-  df <- reactive({
-    withProgress(message = "Doenet analyzer is loading your data,
-                 please be wait patiently.", {
-                   selected_display <- input$dropdown
-                   b <- extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
-                   c <- df_original_json(b)
-                   d <- extract_ids_code3(getQueryText())
-                   hashmap <- hashmap_df_json(c, d)  # Call df_list() as a reactive expression
-                   selected_id <- hashmap[[selected_display]]
-                   
-                   if (is.null(selected_id)) {
-                     # Load default dataset when no option is selected
-                     default_url <- paste0(
-                       "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-                       getQueryString()[["data"]], # this is the web version
-                       "&code=",
-                       getQueryString()[["code"]]
-                     )
-                     data <- stream_in(file(default_url))
-                   } else {
-                     # Load data based on selected option
-                     selected_url <- paste0(
-                       "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-                       selected_id,
-                       "&code=",
-                       getQueryString()[["code"]]
-                     )
-                     data <- stream_in(file(selected_url))
-                   }
-                   
-                   return(data)
-                 })
-  })
+  # Wrap the df_original_json function with memoise
+  df_original_json_memo <- memoise(df_original_json)
+  
   
   
   # df_original <- reactive({
@@ -485,24 +463,25 @@ shinyServer(function(input, output, session) {
   # ====================WRONG ANSWER BASED PLOTS===================================
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
+    
     cleaned_versions() %>%
-      filter(verb == "submitted" |
-               verb == "answered" |
-               verb == "selected") %>% # selected are choice inputs
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
       select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
-      filter(componentName != "/aboutSelf") %>%
-      filter(!is.na(pageNumber)) %>% 
-      filter(!is.na(item)) %>% 
-      filter(responseText != "NULL") %>% 
-      filter(responseText != "＿") %>% 
+      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
+      filter(responseText != "NULL" & responseText != "＿") %>%
       filter(itemCreditAchieved < 1) %>% 
-      group_by(pageNumber, item) %>% 
-      count(responseText) %>%
-      filter(n>=10) %>% 
+      group_by(pageNumber, item, responseText) %>%  
+      summarise(n = n()) %>%  
+      filter(n >= 10) %>%
       ungroup() %>% 
-      ggplot(aes(x = as.character(responseText), y = n)) +
+      mutate(responseText = fct_reorder(
+        as.character(responseText),
+        n,
+        .desc = TRUE
+      ) %>% fct_rev()) %>%
+      ggplot(aes(x = responseText, y = n)) +
       geom_col() +
-      facet_grid(pageNumber ~ item, scales = "free") +
+      facet_wrap(~ pageNumber + item, scales = "free") +
       labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
       coord_flip()
     
@@ -529,16 +508,22 @@ shinyServer(function(input, output, session) {
       select(item, pageNumber, componentName, responseText) %>%
       filter(!is.na(pageNumber)) %>% 
       filter(!is.na(item)) %>% 
-      filter(responseText != "NULL") %>% 
+      filter(responseText != "NULL") %>%
       filter(responseText != "＿") %>% 
       #unnest(responseText) %>% 
       group_by(item, pageNumber) %>% 
       count(responseText) %>%
       filter(n >= 10) %>% 
       ungroup() %>%
-      ggplot(aes(x = as.character(responseText), y = n)) +
+      mutate(responseText = fct_reorder(
+        as.character(responseText),
+        n,
+        .desc = TRUE
+      ) %>% fct_rev()) %>%
+      ggplot(aes(x = responseText, y = n)) +
       geom_col() +
-      facet_wrap(pageNumber ~ item, scales = "free") +
+      facet_wrap(pageNumber ~ item, 
+                 scales = "free") +
       labs(x = "Response", y = "Frequency (if more than 10 times)") +
       coord_flip()
   })

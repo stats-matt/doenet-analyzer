@@ -28,6 +28,9 @@ shinyUI(fluidPage(
                   "Select an option:", 
                   choices = NULL,
                   selectize = FALSE),
+      checkboxGroupInput("outlier_check", label = "Select Options:",
+                         choices = c("Include Outlier", "Exclude Outlier"),
+                         selected = FALSE),
       # actionButton("submit_extra", "Submit"),
       # slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),
