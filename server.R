@@ -626,7 +626,6 @@ shinyServer(function(input, output, session) {
                verb == "answered" |
                verb == "selected") %>% # selected are choice inputs
       select(item, pageNumber, componentName, responseText) %>%
-      filter(componentName != "/aboutSelf") %>%
       filter(!is.na(pageNumber)) %>% 
       filter(!is.na(item)) %>% 
       filter(responseText != "NULL") %>%
