@@ -1,5 +1,7 @@
 # tab for all content in doenetid ----
+
 activity_tab <-
+  
   tabPanel(
     "Analyze activity/content",
     "These tabs provide feedback on the entire activity",
@@ -62,6 +64,15 @@ problem_tab <-
         "This plot shows the most commonly entered wrong answer for each question",
         br(),
         br(),
+        fluidRow(
+          column(6, selectInput("page_dropdown", "Select Page", "")),
+          column(6, selectInput("item_dropdown", "Select Item", ""))
+        ),
+        sliderInput("integer", "Top 10 Most Frequent Wrong Answers",
+                    min = 0, 
+                    max = 0,
+                    value = 0),
+        # Render the plot
         plotOutput("wrong_plot")
       ),
       # tabPanel(

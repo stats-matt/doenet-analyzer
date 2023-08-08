@@ -461,15 +461,63 @@ shinyServer(function(input, output, session) {
   })
   
   # ====================WRONG ANSWER BASED PLOTS===================================
-  # From here down is wrong answer code
-  output$wrong_plot <- renderPlot({
+  
+  # Define a reactive expression for cleaned_data
+  cleaned_data <- reactive({
+    cleaned_versions()
+  })
+  
+  # items for dropdown menu dynamical generation
+  facet_naming_item <- function() {
+    testing_item <- cleaned_data() %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
+      select(item, pageNumber, componentName, responseText) %>%
+      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+               responseText != "NULL" & responseText != "＿") %>%
+      group_by(item, pageNumber) %>%
+      count(responseText) %>%
+      ungroup() %>%
+      distinct(item)
     
-    cleaned_versions() %>%
+    natural_naming_items <- paste0("Item ", testing_item$item)
+    return(natural_naming_items)
+  }
+  # pages for dropdown menu dynamical generation
+  facet_naming_page <- function() {
+    testing_page <- cleaned_data() %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
+      select(item, pageNumber, componentName, responseText) %>%
+      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+               responseText != "NULL" & responseText != "＿") %>%
+      group_by(item, pageNumber) %>%
+      count(responseText) %>%
+      ungroup() %>%
+      distinct(pageNumber)
+    
+    natural_naming_page <- paste0("Page ", testing_page$pageNumber)
+    return(natural_naming_page)
+  }
+  # Observe changes in the item dropdown and update choices for page dropdown accordingly
+  observeEvent(input$item_dropdown, {
+    item_choices <- facet_naming_item()
+    updateSelectInput(session, "item_dropdown", choices = item_choices)
+    page_choices <- facet_naming_page()
+    updateSelectInput(session, "page_dropdown", choices = facet_naming_page())
+  })
+  # Observe changes in the item and page dropdowns
+  max_value_sliderdf <- reactiveVal(0)  # Use a reactiveVal to store the max value
+  observe({
+    item_selected <- input$item_dropdown
+    page_selected <- input$page_dropdown
+    
+    a <- cleaned_data() %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
       select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
       filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
       filter(responseText != "NULL" & responseText != "＿") %>%
-      filter(itemCreditAchieved < 1) %>% 
+      filter(itemCreditAchieved < 1) %>%
+      filter(item == gsub("Item ", "", item_selected)) %>%
+      filter(pageNumber == gsub("Page ", "", page_selected)) %>%
       group_by(pageNumber, item, responseText) %>%  
       summarise(n = n()) %>%  
       filter(n >= 10) %>%
@@ -478,26 +526,98 @@ shinyServer(function(input, output, session) {
         as.character(responseText),
         n,
         .desc = TRUE
-      ) %>% fct_rev()) %>%
-      ggplot(aes(x = responseText, y = n)) +
-      geom_col() +
-      facet_wrap(~ pageNumber + item, scales = "free") +
-      labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
-      coord_flip()
+      ) %>% fct_rev())
     
-    # summary_data() %>%
-    #   filter(!is.na(response)) %>%
-    #   group_by(item) %>%
-    #   filter(itemCreditAchieved < 1) %>%
-    #   ggplot(aes(
-    #     x = as.factor(response),
-    #     y = n,
-    #     fill = as.factor(response)
-    #   )) +
-    #   geom_col() +
-    #   facet_wrap( ~ item, scales = "free") +
-    #   labs(x = "Wrong Answer", y = "Frequency", fill = "Wrong Answer")
+    if (nrow(a) > 0) {
+      max_value_sliderdf(max(a$n))  # Update the reactive value
+      # Update the sliderInput dynamically
+      updateSliderInput(session, "integer", max = max_value_sliderdf(), value = max_value_sliderdf())
+    } else {
+      max_value_sliderdf(0)  # Reset the reactive value to 0
+      # If 'a' is empty, set the maximum and default value of the slider to 0 or any other appropriate default value
+      updateSliderInput(session, "integer", max = 0, value = 0)
+    }
   })
+  # Inside the output$wrong_plot renderPlot function
+  output$wrong_plot <- renderPlot({
+    
+    # Get the selected input values outside the reactive context
+    item_selected <- input$item_dropdown
+    page_selected <- input$page_dropdown
+    slider_selected <- input$integer
+    
+    # Define a reactive expression for filtered_data
+    filtered_data <- reactive({
+      cleaned_data() %>%
+        filter(verb %in% c("submitted", "answered", "selected")) %>%
+        select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
+        filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
+        filter(responseText != "NULL" & responseText != "＿") %>%
+        filter(itemCreditAchieved < 1) %>%
+        filter(item == gsub("Item ", "", item_selected)) %>%
+        filter(pageNumber == gsub("Page ", "", page_selected)) %>%
+        group_by(responseText) %>%  
+        summarise(n = n()) %>%  
+        filter(n >= 10) %>%
+        filter(n %in% (0:slider_selected)) %>%
+        ungroup() %>% 
+        mutate(responseText = fct_reorder(
+          as.character(responseText),
+          n,
+          .desc = TRUE
+        ) %>% fct_rev())
+    })
+    
+    if (nrow(filtered_data()) == 0) {
+      # Display a message to the user if no data points for the selected combination
+      return(plot(0, main = "No data for selected combination",
+                  xlab = "", 
+                  ylab = ""))
+    } else {
+      # Generate the plot using ggplot2
+      ggplot(filtered_data(), aes(x = responseText, y = n)) +
+        geom_col() +
+        labs(x = "Wrong Answer", 
+             y = "Frequency (if more than 10 times)",
+             title = paste("Graph of",
+                           page_selected,
+                           "With",
+                           item_selected)) +
+        coord_flip() +
+        theme(
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.title = element_text(hjust = 0.5)
+        )
+    }
+  })
+  
+  
+  # From here down is wrong answer code
+  # output$wrong_plot <- renderPlot({
+  #   
+  #   cleaned_versions() %>%
+  #     filter(verb %in% c("submitted", "answered", "selected")) %>%
+  #     select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
+  #     filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
+  #     filter(responseText != "NULL" & responseText != "＿") %>%
+  #     filter(itemCreditAchieved < 1) %>% 
+  #     group_by(pageNumber, item, responseText) %>%  
+  #     summarise(n = n()) %>%  
+  #     filter(n >= 10) %>%
+  #     ungroup() %>% 
+  #     mutate(responseText = fct_reorder(
+  #       as.character(responseText),
+  #       n,
+  #       .desc = TRUE
+  #     ) %>% fct_rev()) %>%
+  #     ggplot(aes(x = responseText, y = n)) +
+  #     geom_col() +
+  #     facet_wrap(~ pageNumber + item, scales = "free") +
+  #     labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
+  #     coord_flip()
+  #   
+  # })
   
   # ====================ALL ANSWER PLOTS===================================
   output$all_answers_plot <- renderPlot({

@@ -11,16 +11,18 @@ install.packages("promises")
 install.packages("future")
 library(promises)
 library(future)
+library(ggplot2)
 
 install.packages("memoise")
 library(memoise)
 
+library(tidytext)
 
 source("functions.R")
 
 # load data (put in a doenetid - good doenetids to use are on slack)
 #doenetid <- "_TETkqoYS3slQaDwjqkMrX"
-doenetid <- "_PY82WGbGMv9FIVDzJdxgZ"
+doenetid <- "_ds4TPv9RAI9b3DnYvgROo"
 raw <-  stream_in(file(
   paste0(
     "https://www.doenet.org/api/getEventData.php?doenetId[]=",
@@ -52,7 +54,6 @@ summary_data <- summarize_events(cleaned)
 # skip to line 84
 library(stringr)
 library(rstudioapi)
-
 extract_ids_code1 <- function(url) {
   start_index <- str_locate(url, "data=")[,2]
   ids <- list()
@@ -89,7 +90,6 @@ extract_ids_code2 <- function(url) {
   
   return(ids)
 }
-
 extract_ids_code4 <- function(url) {
   url_1 <- gsub("&code=.*", 
                 "", 
@@ -114,14 +114,9 @@ hashmap_id_failedattempt <- function(ids) {
   
   return(hashmap)
 }
-
-
-
 # the follwoing functions are a work in progress the functions above are scrap
 # work
-
 url <- "https://doenet.shinyapps.io/analyzer/?data=_Y8rhJ0x5KzbEF4cc73RFH&data=_szGjThMMAaq0gmXaig9nq&code=4k6dSxGZ0BSztlexusbmU"
-
 # the following code generates a list containing the doent ids as type of string
 # good attempt but list is not a friendly type with dplyr package
 extract_ids_code3 <- function(url) {
@@ -133,7 +128,6 @@ extract_ids_code3 <- function(url) {
   
   return(ids)
 }
-
 # the following function generates a hashmap with the appropriate amount
 # of keys for the number of ids good attempt but list is not a friendly type
 # with dplyer package
@@ -144,26 +138,19 @@ hashmap_ids <- function(ids) {
     hashmap[[key]] <- ids[[index]]
   }
 }
-
-
-
 # Fetch the IDs from the extract_ids_code3 function
 ids <- extract_ids_code3(url)
-
 # Create the hashmap
 hashmap <- hashmap_ids(ids)
-
 # The following code chunk dynamically creates a dropdown depending on the length
 # from the output of extract_ids_code3. The object df accepts a selected course
 # id and process the information relative to that course id
-
 ui <- fluidPage(
   selectInput("dropdown", 
               "Select an option:", 
               choices = NULL),
   tableOutput("data_table")
 )
-
 server <- function(input, output, session) {
   my_list <- names(hashmap)
   
@@ -173,9 +160,7 @@ server <- function(input, output, session) {
                       choices = my_list)
   })
 }
-  
 # Reactively update df based on the selected ID
-
 df <- reactive({
   withProgress(message = 'Loading Data', {
     selected_key <- input$dropdown
@@ -195,8 +180,6 @@ df <- reactive({
     return(data)
   })
 })
-
-
 #===============other implementation===========================================
 # the following function generates a data frame with the appropriate amount
 # of columns for the number of IDs
@@ -211,7 +194,6 @@ extract_ids_code3 <- function(url) {
   
   return(ids)
 }
-
 hashmap_ids <- function(ids) {
   hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids), 
                                dimnames = list(NULL, paste0("key", seq_along(ids)))))
@@ -219,20 +201,15 @@ hashmap_ids <- function(ids) {
   
   return(hashmap)
 }
-
 # Convert the list to a data frame
 ids_df <- data.frame(ids = extract_ids_code3(url))
-
 # Create the hashmap as a data frame
 hashmap <- hashmap_ids(ids_df$ids)
-
 # Apply dplyr functions on the data frame
 filtered_data <- ids_df %>% 
   select(ids) %>% 
   distinct()
-
 # Reactively update df based on the selected ID
-
 df <- reactive({
   withProgress(message = 'Loading Data', {
     selected_key <- input$dropdown
@@ -252,15 +229,6 @@ df <- reactive({
     return(data)
   })
 })
-
-
-
-
-# install.packages("devtools")
-devtools::install_github("r-lib/conflicted")
-conflicted::conflicts_prefer(dplyr::select())
-
-
 #====================Testing Shiny Output=======================================
 library(shiny)
 library(tidyverse)
@@ -699,5 +667,287 @@ cleaned_versions %>%
   facet_wrap(~ pageNumber + item, scales = "free") +
   labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
   coord_flip()
+
+#======================Testing out naming the facet_wraps=======================
+
+custom_labeller <- function(var1, var2) {
+  paste("Page", var1, "-", "Item", var2)
+}
+
+cleaned_versions %>%
+  filter(verb == "submitted" |
+           verb == "answered" |
+           verb == "selected") %>% # selected are choice inputs
+  select(item, pageNumber, componentName, responseText) %>%
+  filter(componentName != "/aboutSelf") %>%
+  filter(!is.na(pageNumber)) %>% 
+  filter(!is.na(item)) %>% 
+  filter(responseText != "NULL") %>%
+  filter(responseText != "＿") %>% 
+  #unnest(responseText) %>% 
+  filter(item == "1") %>%
+  filter(pageNumber == "1") %>%
+  group_by(item, pageNumber) %>% 
+  count(responseText) %>%
+  filter(n >= 10) %>% 
+  ungroup() %>%
+  mutate(responseText = fct_reorder(
+    as.character(responseText),
+    n,
+    .desc = TRUE
+  ) %>% fct_rev()) %>%
+  ggplot(aes(x = responseText, y = n)) +
+  geom_col() +
+  facet_wrap(~ pageNumber + item, scales = "free") +
+  labs(x = "Response", 
+       y = "Frequency (if more than 10 times)") +
+  coord_flip() +
+  theme(
+    strip.background = element_blank(),
+    strip.text.x = element_blank()
+  )
+
+facet_naming_item <- function() {
+  testing_item <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(item)
+  
+  natural_naming_items <- paste0("Item ", testing_item$item)
+  return(natural_naming_items)
+}
+facet_naming_page <- function() {
+  testing_page <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(pageNumber)
+  
+  natural_naming_page <- paste0("Page ", testing_page$pageNumber)
+  return(natural_naming_page)
+}
+facet_onlynumbers_page <- function() {
+  testing_page <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(pageNumber)
+  
+  return(testing_page$pageNumber)
+}
+# items for dropdown menu dynamical generation
+facet_naming_item <- function() {
+  testing_item <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(item)
+  
+  natural_naming_items <- paste0("Item ", testing_item$item)
+  return(natural_naming_items)
+}
+# pages for dropdown menu dynamical generation
+facet_naming_page <- function() {
+  testing_page <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(pageNumber)
+  
+  natural_naming_page <- paste0("Page ", testing_page$pageNumber)
+  return(natural_naming_page)
+}
+# for later use when generating the graph (page Numbers)
+facet_onlynumbers_page <- function() {
+  testing_page <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(pageNumber)
+  
+  return(testing_page$pageNumber)
+}
+# for later use when generating the graph (item Numbers)
+facet_onlynumbers_items <- function() {
+  testing_page <- cleaned_versions %>%
+    filter(verb %in% c("submitted", "answered", "selected")) %>%
+    select(item, pageNumber, componentName, responseText) %>%
+    filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
+             responseText != "NULL" & responseText != "＿") %>%
+    group_by(item, pageNumber) %>%
+    count(responseText) %>%
+    filter(n >= 10) %>%
+    ungroup() %>%
+    mutate(responseText = fct_reorder(as.character(responseText), n, .desc = TRUE) %>% fct_rev()) %>%
+    distinct(item)
+  
+  return(testing_page$item)
+}
+
+# find the page number that we want to analyze
+matching_pageNumbers <- function(){
+  page_selected <- input$page_dropdown
+  pagesNumber_list <- facet_onlynumbers_page()
+  
+  for (pages in pagesNumber_list) {
+    
+    if (length(unlist(gregexpr(as.character(pages), page_selected))) > 1)
+      return(pages)
+  }
+  return(NULL)  # Return NULL if no match is found
+}
+matching_itemNumbers <- function(){
+  item_selected <- input$item_dropdown
+  itemsNumber_list <- facet_onlynumbers_items()  # Corrected function name
+  
+  for (items in itemsNumber_list) {
+    if (items %in% as.numeric(sub("Item ", "", item_selected)))
+      return(as.character(items))
+  }
+  return(NULL)  # Return NULL if no match is found
+}
+
+# find the page number that we want to analyze
+matching_pageNumbers <- function(){
+  page_selected <- input$page_dropdown
+  pagesNumber_list <- facet_onlynumbers_page()
+  
+  for (pages in pagesNumber_list) {
+    if (as.character(pages) %in% page_selected)
+      return(as.character(pages))
+  }
+  return(NULL)  # Return NULL if no match is found
+}
+matching_itemNumbers <- function() {
+  item_selected <- input$item_dropdown
+  itemsNumber_list <- facet_onlynumbers_items()
+  
+  for (items in itemsNumber_list) {
+    if (as.character(items) %in% item_selected)
+      return(as.character(items))
+  }
+  return(NULL)  # Return NULL if no match is found
+}
+purely_numeric_item <- function(){
+  text <- input$item_dropdown
+  item_result <- as.bigq(gsub("\\D*(\\d+\\.?\\d*).*", 
+                         paste("\\", matching_itemNumbers()), 
+                         text))
+  return(as.character(item_result))
+}
+purely_numeric_pages <- function(){
+  text <- input$page_dropdown
+  page_result <- as.bigq(gsub("\\D*(\\d+\\.?\\d*).*", 
+                              paste("\\", matching_itemNumbers()), 
+                              text))
+  return(as.character(page_result))
+}
+
+#========================Testing out slider implementation======================
+slider_df <- cleaned_versions %>%
+  filter(verb == "submitted" | verb == "answered" | verb == "selected") %>%
+  select(item, pageNumber, componentName, responseText) %>%
+  filter(componentName != "/aboutSelf") %>%
+  filter(!is.na(pageNumber)) %>%
+  filter(!is.na(item)) %>%
+  filter(responseText != "NULL") %>%
+  filter(responseText != "＿") %>%
+  filter(itemCreditAchieved < 1) %>%
+  filter(item == gsub("Item ", "", item_selected)) %>%
+  filter(pageNumber == gsub("Page ", "", page_selected)) %>%
+  group_by(item, pageNumber) %>%
+  count(responseText) %>%
+  filter(n >= 10) %>% 
+  distinct(responseText) %>%
+  summarise(distinct_responses_count = n())
+  
+max_value_sliderdf <- max(slider_df$distinct_responses_count)
+
+ a <- cleaned_versions %>%
+  filter(verb == "submitted" |
+           verb == "answered" |
+           verb == "selected") %>% # selected are choice inputs
+  select(item, pageNumber, componentName, responseText) %>%
+  filter(componentName != "/aboutSelf") %>%
+  filter(!is.na(pageNumber)) %>% 
+  filter(!is.na(item)) %>% 
+  filter(responseText != "NULL") %>%
+  filter(responseText != "＿") %>% 
+  #unnest(responseText) %>% 
+  filter(item == "1") %>%
+  filter(pageNumber == "2") %>%
+  group_by(pageNumber, item, responseText) %>%  
+  summarise(n = n()) %>%  
+  filter(n >= 10) %>%
+  ungroup() %>% 
+  mutate(responseText = fct_reorder(
+    as.character(responseText),
+    n,
+    .desc = TRUE
+  ) %>% fct_rev())
+ 
+ max_value_sliderdf <- max(a$n)
+ 
+ cleaned_versions %>%
+   filter(verb == "submitted" |
+            verb == "answered" |
+            verb == "selected") %>% # selected are choice inputs
+   select(item, pageNumber, componentName, responseText) %>%
+   filter(componentName != "/aboutSelf") %>%
+   filter(!is.na(pageNumber)) %>% 
+   filter(!is.na(item)) %>% 
+   filter(responseText != "NULL") %>%
+   filter(responseText != "＿") %>% 
+   #unnest(responseText) %>% 
+   filter(item == "1") %>%
+   filter(pageNumber == "2") %>%
+   group_by(pageNumber, item, responseText) %>%  
+   summarise(n = n()) %>%  
+   filter(n >= 10) %>%
+   ungroup() %>% 
+   mutate(responseText = fct_reorder(
+     as.character(responseText),
+     n,
+     .desc = TRUE
+   ) %>% fct_rev()) %>%
+   filter(!(n %in% (60:max_value_sliderdf)))
+
 
 
