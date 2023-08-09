@@ -8,6 +8,8 @@ library(scales)
 library(DT)
 library(stringr)
 library(rstudioapi)
+library(memoise)
+library(forcats)
 
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
@@ -78,6 +80,7 @@ shinyServer(function(input, output, session) {
   events <- reactive({
     load_data(query())
   })
+
   
   #if (observe(length(unlist(query()) > 1))) {
   #  doenetId_list <- reactive({1:length(unlist(query()))})
@@ -521,6 +524,7 @@ shinyServer(function(input, output, session) {
   # ====================WRONG ANSWER BASED PLOTS===================================
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
+    
     cleaned_versions() %>%
       filter(verb == "submitted" |
                verb == "answered" |
@@ -546,7 +550,7 @@ shinyServer(function(input, output, session) {
       ungroup() %>%
       ggplot(aes(x = as.character(responseText), y = n)) +
       geom_col() +
-      facet_grid(pageNumber ~ item, scales = "free") +
+      facet_wrap(~ pageNumber + item, scales = "free") +
       labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
       coord_flip()
     
@@ -577,12 +581,19 @@ shinyServer(function(input, output, session) {
       filter(responseText != "＿") %>%
       #unnest(responseText) %>%
       group_by(item, pageNumber) %>%
+
       count(responseText) %>%
       filter(n >= 10) %>%
       ungroup() %>%
-      ggplot(aes(x = as.character(responseText), y = n)) +
+      mutate(responseText = fct_reorder(
+        as.character(responseText),
+        n,
+        .desc = TRUE
+      ) %>% fct_rev()) %>%
+      ggplot(aes(x = responseText, y = n)) +
       geom_col() +
-      facet_wrap(pageNumber ~ item, scales = "free") +
+      facet_wrap(pageNumber ~ item, 
+                 scales = "free") +
       labs(x = "Response", y = "Frequency (if more than 10 times)") +
       coord_flip()
   })
