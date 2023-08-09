@@ -32,6 +32,12 @@ shinyUI(fluidPage(
                          choices = c("Include Outlier", "Exclude Outlier"),
                          selected = FALSE),
       # actionButton("submit_extra", "Submit"),
+      conditionalPanel(condition = "output.show_pulldown",
+      selectInput(
+        "select",
+        label = h3("Select box"),
+        choices = c()
+      )),
       # slider
       numericInput("maxtime_set", "Slider maximum time:", 80000),
       uiOutput("time_slider"),
