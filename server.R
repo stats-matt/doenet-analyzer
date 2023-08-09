@@ -374,6 +374,9 @@ shinyServer(function(input, output, session) {
     # bins = nrow(distinct(summary_data() , score))
     summary_data() %>%
       filter(!is.na(itemCreditAchieved)) %>%
+      group_by(userId, pageNumber, item) %>% 
+      slice_tail(n = 1) %>% 
+      ungroup() %>% 
       ggplot(aes(x = itemCreditAchieved)) +
       geom_histogram() +
       facet_grid(pageNumber ~ item) +
@@ -408,7 +411,8 @@ shinyServer(function(input, output, session) {
     ggplot(totals, aes(x = Var1, y = Freq)) +
       geom_bar(stat = "identity") +
       scale_y_continuous(breaks = pretty_breaks()) +
-      labs(x = "Question", y = "Submissions", title = "Average Number of Submissions per Question (All Attempts)")
+      labs(x = "Question", y = "Submissions", title = "Average Number of Submissions per Question (All Attempts)") +
+      coord_flip()
   })
   
   # This displays a plot of how the submissions are distributed across attempts
@@ -741,7 +745,4 @@ shinyServer(function(input, output, session) {
                   values_from = itemCreditAchieved) %>%
       ggradar()
   })
-  
-  
-  
 })
