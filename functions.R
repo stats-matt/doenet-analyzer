@@ -1,6 +1,23 @@
 #Functions
 #These are functions used by the server for the Doenet stats analyzer
 
+#======================load data=============================================
+load_data <- function(query) {
+  tmp_events <- data.frame()
+  for (i in 1:length(unlist(query))) {
+    raw <-  stream_in(file(
+      paste0(
+        "https://www.doenet.org/api/getEventData.php?doenetId[]=",
+        query[[i]]
+      )
+    ))
+    new_events <-  raw$events[[1]]
+    tmp_events <- bind_rows(tmp_events, new_events)
+  }
+  return(tmp_events)
+}
+
+
 #======================clean_events=============================================
 #This function does most of the heavy lifting of cleaning the events data
 #That consists of getting rid of events outside of date range, determining which

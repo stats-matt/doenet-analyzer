@@ -58,37 +58,30 @@ shinyServer(function(input, output, session) {
   observe({
     updateSelectInput(
       session = session,
-      inputId = "select",
-      choices = paste(query()),
+      inputId = "activity_select",
+      choices = c("All", paste(query())),
     )
   })
   
-  load_data <- function(query) {
-    tmp_events <- data.frame()
-    for (i in 1:length(unlist(query))) {
-      raw <-  stream_in(file(
-        paste0(
-          "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-          query[[i]]
-        )
-      ))
-      new_events <-  raw$events[[1]]
-      tmp_events <- bind_rows(tmp_events, new_events)
-    }
-    return(tmp_events)
-  }
-  events <- reactive({
+  events_full <- reactive({
     load_data(query())
   })
-
+  
+  events <- reactive({
+    if(input$activity_select == "All"){
+      events_full()
+    }
+    else{
+      events_full() %>% filter(doenetId == input$activity_select)
+    }
+  })
+  
+  
   
   #if (observe(length(unlist(query()) > 1))) {
   #  doenetId_list <- reactive({1:length(unlist(query()))})
     #names(doenetId_list()) <- reactive({events()$doenetId %>% unique()})
   #}
-  
-  
-
   
   # this is the hash method
   #

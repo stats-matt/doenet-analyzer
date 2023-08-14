@@ -19,19 +19,13 @@ shinyUI(fluidPage(
     sidebarPanel(
       width = 3,
       actionButton("update", "Update Data", icon = icon("sync")),
-      # bookmarkButton(),
       downloadButton("downloadData", "Download Data"),
-      # h1("Compare experiments:"),
-      # textInput("extra_id", "Extra DoenetID"),
-      # actionButton("gennum","next"),
-      selectInput("dropdown", 
-                  "Select an option:", 
-                  choices = NULL,
-                  selectize = FALSE),
+      selectInput("activity_select", 
+                  "Select an activity:", 
+                  choices = NULL),
       checkboxGroupInput("outlier_check", label = "Select Options:",
                          choices = c("Include Outlier", "Exclude Outlier"),
                          selected = FALSE),
-      # actionButton("submit_extra", "Submit"),
       conditionalPanel(condition = "output.show_pulldown",
       selectInput(
         "select",
@@ -48,7 +42,6 @@ shinyUI(fluidPage(
       tabsetPanel(type = "pills",
                   activity_tab,
                   problem_tab,
-                  #student_tab,
                   data_tab)
     )
   )
