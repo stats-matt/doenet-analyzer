@@ -55,7 +55,7 @@ library(stringr)
 library(rstudioapi)
 
 extract_ids_code1 <- function(url) {
-  start_index <- str_locate(url, "data=")[,2]
+  start_index <- str_locate(url, "data=")[, 2]
   ids <- list()
   match_length <- attr(regexpr("data=", url), "match.length")
   
@@ -80,7 +80,7 @@ extract_ids_code2 <- function(url) {
   while (start_index > 0) {
     end_index <- regexpr("&data=", url, start_index)[1]
     if (end_index == -1) {
-      ids <- c(ids, list(substr(url, 
+      ids <- c(ids, list(substr(url,
                                 start_index)))
       break
     }
@@ -92,26 +92,28 @@ extract_ids_code2 <- function(url) {
 }
 
 extract_ids_code4 <- function(url) {
-  url_1 <- gsub("&code=.*", 
-                "", 
+  url_1 <- gsub("&code=.*",
+                "",
                 as.character(url))
   url_2 <- sub('.*\\?', '', url_1)
-  url_3 <- sub("data=", 
-               "&data=", 
+  url_3 <- sub("data=",
+               "&data=",
                url_2)
   
-  ids <- strsplit(url_3, 
+  ids <- strsplit(url_3,
                   "&data=")[[1]][-1]
   
   return(ids)
 }
 hashmap_id_failedattempt <- function(ids) {
-  hashmap <- data.frame(matrix(nrow = 1, 
-                               ncol = length(ids), 
-                               dimnames = list(NULL, 
-                                               paste0("Doenet id", 
-                                                      seq_along(ids)))))
-  hashmap[1, ] <- ids
+  hashmap <- data.frame(matrix(
+    nrow = 1,
+    ncol = length(ids),
+    dimnames = list(NULL,
+                    paste0("Doenet id",
+                           seq_along(ids)))
+  ))
+  hashmap[1,] <- ids
   
   return(hashmap)
 }
@@ -121,13 +123,15 @@ hashmap_id_failedattempt <- function(ids) {
 # the follwoing functions are a work in progress the functions above are scrap
 # work
 
-url <- "https://doenet.shinyapps.io/analyzer/?data=AAA&data=BBB&data=CCC&data=DDD"
+url <-
+  "https://doenet.shinyapps.io/analyzer/?data=AAA&data=BBB&data=CCC&data=DDD"
 
 # the following code generates a list containing the doent ids as type of string
 # good attempt but list is not a friendly type with dplyr package
 extract_ids_code3 <- function(url) {
   url_1 <- gsub("&code=.*", "", as.character(url))
-  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_2 <-
+    sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
   url_3 <- sub("data=", "&data=", url_2)
   
   ids <- as.list(strsplit(url_3, "&data=")[[1]][-1])
@@ -161,8 +165,8 @@ hashmap <- hashmap_ids(ids)
 # id and process the information relative to that course id
 
 ui <- fluidPage(
-  selectInput("dropdown", 
-              "Select an option:", 
+  selectInput("dropdown",
+              "Select an option:",
               choices = NULL),
   tableOutput("data_table")
 )
@@ -171,12 +175,12 @@ server <- function(input, output, session) {
   my_list <- names(hashmap)
   
   observe({
-    updateSelectInput(session, 
-                      "dropdown", 
+    updateSelectInput(session,
+                      "dropdown",
                       choices = my_list)
   })
 }
-  
+
 # Reactively update df based on the selected ID
 
 df <- reactive({
@@ -207,7 +211,8 @@ df <- reactive({
 # the following code generates a character vector containing the document IDs
 extract_ids_code3 <- function(url) {
   url_1 <- gsub("&code=.*", "", as.character(url))
-  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_2 <-
+    sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
   url_3 <- sub("data=", "&data=", url_2)
   
   ids <- strsplit(url_3, "&data=")[[1]][-1]
@@ -216,9 +221,12 @@ extract_ids_code3 <- function(url) {
 }
 
 hashmap_ids <- function(ids) {
-  hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids), 
-                               dimnames = list(NULL, paste0("key", seq_along(ids)))))
-  hashmap[1, ] <- ids
+  hashmap <- data.frame(matrix(
+    nrow = 1,
+    ncol = length(ids),
+    dimnames = list(NULL, paste0("key", seq_along(ids)))
+  ))
+  hashmap[1,] <- ids
   
   return(hashmap)
 }
@@ -230,8 +238,8 @@ ids_df <- data.frame(ids = extract_ids_code3(url))
 hashmap <- hashmap_ids(ids_df$ids)
 
 # Apply dplyr functions on the data frame
-filtered_data <- ids_df %>% 
-  select(ids) %>% 
+filtered_data <- ids_df %>%
+  select(ids) %>%
   distinct()
 
 # Reactively update df based on the selected ID
@@ -274,7 +282,8 @@ library(DT)
 
 extract_ids_code3 <- function(queryText) {
   url_1 <- gsub("&code=.*", "", queryText)
-  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_2 <-
+    sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
   url_3 <- sub("data=", "&data=", url_2)
   
   ids <- strsplit(url_3, "&data=")[[1]][-1]
@@ -283,27 +292,31 @@ extract_ids_code3 <- function(queryText) {
 }
 
 hashmap_ids <- function(ids) {
-  hashmap <- data.frame(matrix(nrow = 1, ncol = length(ids),
-                               dimnames = list(NULL, paste0("key", seq_along(ids)))))
-  hashmap[1, ] <- ids
+  hashmap <- data.frame(matrix(
+    nrow = 1,
+    ncol = length(ids),
+    dimnames = list(NULL, paste0("key", seq_along(ids)))
+  ))
+  hashmap[1,] <- ids
   
   return(hashmap)
 }
 
 shinyApp(
-  ui = fluidPage(
-    verbatimTextOutput("query")
-  ),
+  ui = fluidPage(verbatimTextOutput("query")),
   
   server = function(input, output, session) {
     output$query <- renderText({
       query <- getQueryString()
       queryText <- paste(names(query), query,
-                         sep = "=", collapse=", ")
-      paste("Your query string is:\n", queryText, 
-            "\n",
-            "The hashmap contains the id:\n",
-            paste(extract_ids_code3(queryText), collapse = ", "))
+                         sep = "=", collapse = ", ")
+      paste(
+        "Your query string is:\n",
+        queryText,
+        "\n",
+        "The hashmap contains the id:\n",
+        paste(extract_ids_code3(queryText), collapse = ", ")
+      )
     })
   }
 )
@@ -322,7 +335,8 @@ library(rstudioapi)
 
 extract_ids_code3 <- function(queryText) {
   url_1 <- gsub("&code=.*", "", queryText)
-  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_2 <-
+    sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
   url_3 <- sub("data=", "&data=", url_2)
   
   ids <- strsplit(url_3, "&data=")[[1]][-1]
@@ -333,9 +347,15 @@ extract_ids_code3 <- function(queryText) {
 hashmap_ids <- function(ids) {
   if (length(ids) > 0) {
     course_ids <- paste("Course ID", seq_along(ids))
-    hashmap <- data.frame(course_id = ids, course_id_display = course_ids)
+    hashmap <-
+      data.frame(course_id = ids, course_id_display = course_ids)
   } else {
-    hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
+    hashmap <-
+      data.frame(
+        course_id = character(),
+        course_id_display = character(),
+        stringsAsFactors = FALSE
+      )
   }
   
   return(hashmap)
@@ -355,15 +375,20 @@ shinyApp(
       ids <- extract_ids_code3(queryText)
       hashmap <- hashmap_ids(ids)
       
-      paste("Your query string is:\n", queryText, 
-            "\n",
-            "The hashmap contains the id:\n",
-            paste(ids, collapse = ", "))
+      paste(
+        "Your query string is:\n",
+        queryText,
+        "\n",
+        "The hashmap contains the id:\n",
+        paste(ids, collapse = ", ")
+      )
     })
     
     observe({
-      queryText <- paste(names(getQueryString()), getQueryString(),
-                         sep = "=", collapse = ", ")
+      queryText <- paste(names(getQueryString()),
+                         getQueryString(),
+                         sep = "=",
+                         collapse = ", ")
       ids <- extract_ids_code3(queryText)
       hashmap <- hashmap_ids(ids)
       
@@ -375,7 +400,8 @@ shinyApp(
         selected_display <- input$dropdown
         
         hashmap <- hashmap_ids(extract_ids_code3(getQueryString()))
-        selected_id <- hashmap$course_id[hashmap$course_id_display == selected_display]
+        selected_id <-
+          hashmap$course_id[hashmap$course_id_display == selected_display]
         
         if (length(selected_id) > 0) {
           url <- paste0(
@@ -399,13 +425,15 @@ shinyApp(
 
 getQueryText <- reactive({
   query <- getQueryString()
-  queryText <- paste(names(query), query, sep = "=", collapse = ", ")
+  queryText <-
+    paste(names(query), query, sep = "=", collapse = ", ")
   return(queryText)
 })
 
 extract_ids_code3 <- function(queryText) {
   url_1 <- gsub("&code=.*", "", queryText)
-  url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+  url_2 <-
+    sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
   url_3 <- sub("data=", "&data=", url_2)
   
   ids <- strsplit(url_3, "&data=")[[1]][-1]
@@ -416,9 +444,19 @@ extract_ids_code3 <- function(queryText) {
 hashmap_ids <- function(ids) {
   if (length(ids) > 0) {
     course_ids <- paste("Course ID", seq_along(ids))
-    hashmap <- data.frame(course_id = ids, course_id_display = course_ids, stringsAsFactors = FALSE)
+    hashmap <-
+      data.frame(
+        course_id = ids,
+        course_id_display = course_ids,
+        stringsAsFactors = FALSE
+      )
   } else {
-    hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
+    hashmap <-
+      data.frame(
+        course_id = character(),
+        course_id_display = character(),
+        stringsAsFactors = FALSE
+      )
   }
   
   return(hashmap)
@@ -437,13 +475,15 @@ df <- reactive({
     selected_display <- input$dropdown
     
     hashmap <- hashmap_ids(extract_ids_code3(getQueryText()))
-    selected_id <- hashmap$course_id[hashmap$course_id_display == selected_display]
+    selected_id <-
+      hashmap$course_id[hashmap$course_id_display == selected_display]
     
     if (is.null(selected_id)) {
       # Load default dataset when no option is selected
       default_url <- paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        getQueryString()[["data"]], # this is the web version
+        getQueryString()[["data"]],
+        # this is the web version
         "&code=",
         getQueryString()[["code"]]
       )
@@ -467,7 +507,8 @@ df <- reactive({
 
 getQueryText <- reactive({
   query <- getQueryString()
-  queryText <- paste(names(query), query, sep = "=", collapse = ", ")
+  queryText <-
+    paste(names(query), query, sep = "=", collapse = ", ")
   return(queryText)
 })
 extract_ids_code3 <- function(queryText) {
@@ -475,7 +516,8 @@ extract_ids_code3 <- function(queryText) {
     return(character())
   } else {
     url_1 <- gsub("&code=.*", "", queryText)
-    url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+    url_2 <-
+      sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
     url_3 <- sub("data=", "&data=", url_2)
     ids <- strsplit(url_3, "&data=")[[1]][-1]
     return(ids)
@@ -484,9 +526,19 @@ extract_ids_code3 <- function(queryText) {
 hashmap_ids <- function(ids) {
   if (length(ids) > 0) {
     course_ids <- paste("Course ID", seq_along(ids))
-    hashmap <- data.frame(course_id = ids, course_id_display = course_ids, stringsAsFactors = FALSE)
+    hashmap <-
+      data.frame(
+        course_id = ids,
+        course_id_display = course_ids,
+        stringsAsFactors = FALSE
+      )
   } else {
-    hashmap <- data.frame(course_id = character(), course_id_display = character(), stringsAsFactors = FALSE)
+    hashmap <-
+      data.frame(
+        course_id = character(),
+        course_id_display = character(),
+        stringsAsFactors = FALSE
+      )
   }
   return(hashmap)
 }
@@ -519,7 +571,8 @@ df_original_json <- function(hashmap) {
 hashmap_df_json <- function(df_list, ids) {
   if (length(ids) > 0) {
     course_ids <- paste("Course ID", seq_along(ids))
-    hashmap <- data.frame(json_data = df_list, selected_display = course_ids)
+    hashmap <-
+      data.frame(json_data = df_list, selected_display = course_ids)
   } else {
     hashmap <- list()
   }
@@ -539,17 +592,20 @@ df <- reactive({
   withProgress(message = "Doenet analyzer is loading your data,
                  please be wait patiently.", {
                    selected_display <- input$dropdown
-                   b <- extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
+                   b <-
+                     extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
                    c <- df_original_json(b)
                    d <- extract_ids_code3(getQueryText())
-                   hashmap <- hashmap_df_json(c, d)  # Call df_list() as a reactive expression
+                   hashmap <-
+                     hashmap_df_json(c, d)  # Call df_list() as a reactive expression
                    selected_id <- hashmap[[selected_display]]
                    
                    if (is.null(selected_id)) {
                      # Load default dataset when no option is selected
                      default_url <- paste0(
                        "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-                       getQueryString()[["data"]], # this is the web version
+                       getQueryString()[["data"]],
+                       # this is the web version
                        "&code=",
                        getQueryString()[["code"]]
                      )
@@ -585,7 +641,8 @@ df <- reactive({
 #============================TEMP CODE==========================================
 getQueryText <- reactive({
   query <- getQueryString()
-  queryText <- paste(names(query), query, sep = "=", collapse = ", ")
+  queryText <-
+    paste(names(query), query, sep = "=", collapse = ", ")
   return(queryText)
 })
 extract_ids_code3 <- function(queryText) {
@@ -593,7 +650,8 @@ extract_ids_code3 <- function(queryText) {
     return(character())
   } else {
     url_1 <- gsub("&code=.*", "", queryText)
-    url_2 <- sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
+    url_2 <-
+      sub("https://doenet.shinyapps.io/analyzer/\\?", "", url_1)
     url_3 <- sub("data=", "&data=", url_2)
     ids <- strsplit(url_3, "&data=")[[1]][-1]
     return(ids)
@@ -628,7 +686,8 @@ df_original_json <- function(hashmap) {
 hashmap_df_json <- function(df_list, ids) {
   if (length(ids) > 0) {
     course_ids <- paste("Course ID", seq_along(ids))
-    hashmap <- data.frame(json_data = df_list, selected_display = course_ids)
+    hashmap <-
+      data.frame(json_data = df_list, selected_display = course_ids)
   } else {
     hashmap <- list()
   }
@@ -650,18 +709,21 @@ df_original_json_memo <- memoise(df_original_json)
 df <- reactive({
   withProgress(message = "Doenet analyzer is loading your data, please be patient.", {
     selected_display <- input$dropdown
-    b <- extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
+    b <-
+      extract_values(hashmap_ids(extract_ids_code3(getQueryText())))
     
     # Use the memoized version of df_original_json directly
     hashmap <- df_original_json_memo(b)
     
-    selected_id <- hashmap$json_data[[selected_display]]  # Retrieve the selected data from the hashmap
+    selected_id <-
+      hashmap$json_data[[selected_display]]  # Retrieve the selected data from the hashmap
     
     if (is.null(selected_id)) {
       # Load default dataset when no option is selected
       default_url <- paste0(
         "https://www.doenet.org/api/getEventData.php?doenetId[]=",
-        getQueryString()[["data"]], # this is the web version
+        getQueryString()[["data"]],
+        # this is the web version
         "&code=",
         getQueryString()[["code"]]
       )
@@ -684,23 +746,28 @@ library(forcats)
 
 cleaned_versions %>%
   filter(verb %in% c("submitted", "answered", "selected")) %>%
-  select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
-  filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
+  select(itemCreditAchieved,
+         userId,
+         response,
+         responseText,
+         item,
+         componentName,
+         pageNumber) %>%
+  filter(
+    componentName != "/aboutSelf" &
+      !is.na(pageNumber) & !is.na(item) & !is.na(responseText)
+  ) %>%
   filter(responseText != "NULL" & responseText != "＿") %>%
-  filter(itemCreditAchieved < 1) %>% 
-  group_by(pageNumber, item, responseText) %>%  
-  summarise(n = n()) %>%  
+  filter(itemCreditAchieved < 1) %>%
+  group_by(pageNumber, item, responseText) %>%
+  summarise(n = n()) %>%
   filter(n >= 10) %>%
-  ungroup() %>% 
-  mutate(responseText = fct_reorder(
-    as.character(responseText),
-    n,
-    .desc = TRUE
-  ) %>% fct_rev()) %>%
+  ungroup() %>%
+  mutate(responseText = fct_reorder(as.character(responseText),
+                                    n,
+                                    .desc = TRUE) %>% fct_rev()) %>%
   ggplot(aes(x = responseText, y = n)) +
   geom_col() +
-  facet_wrap(~ pageNumber + item, scales = "free") +
+  facet_wrap( ~ pageNumber + item, scales = "free") +
   labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
   coord_flip()
-
-

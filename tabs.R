@@ -32,8 +32,8 @@ activity_tab <-
         br(),
         plotOutput("time_plot_person_version")
       )
-      )
     )
+  )
 
 # tab for analysis by problem ----
 problem_tab <-
@@ -140,8 +140,14 @@ data_tab <-
       ),
       tabPanel("Raw Data (events)", DT::DTOutput("events_dt")),
       tabPanel("Cleaned, all versions", DT::DTOutput("cleaned_versions_dt")),
-      tabPanel("Summary, all versions", DT::DTOutput("summary_data_versions_dt")),
+      tabPanel(
+        "Summary, all versions",
+        DT::DTOutput("summary_data_versions_dt")
+      ),
       tabPanel("Cleaned, selected version", DT::DTOutput("cleaned_dt")),
-      tabPanel("Summary, selected version", DT::dataTableOutput("summary_data_dt"))
+      tabPanel(
+        "Summary, selected version",
+        DT::dataTableOutput("summary_data_dt")
+      )
     )
   )

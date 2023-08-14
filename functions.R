@@ -25,26 +25,26 @@ load_data <- function(query) {
 #JSON strings.
 
 clean_events <- function(events, min_date, max_date) {
-  
   events <- # remove visible verbs to keep the data smallish
-    events %>% 
+    events %>%
     filter(verb != "isVisible")
   
-  events <- #This block adds the timestamp column to the cleaned data set
+  events <-
+    #This block adds the timestamp column to the cleaned data set
     events %>%
     group_by(userId) %>%
     mutate(timestamp = anytime(timestamp)) %>%
     mutate(time_person = timestamp - min(timestamp)) %>%
     ungroup() %>%
     mutate(time_activity = timestamp - min(timestamp))# %>%
-    #filter((timestamp > min_date) & (timestamp < max_date))
+  #filter((timestamp > min_date) & (timestamp < max_date))
   
   events <- # this separates the context, object, and result columns
     events %>%
     mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
-    unnest_wider(new) %>% 
+    unnest_wider(new) %>%
     mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
-    unnest_wider(new) %>% 
+    unnest_wider(new) %>%
     mutate(response = map(result, ~ fromJSON(.))) %>%
     unnest_wider(response)
   
@@ -74,8 +74,9 @@ clean_events <- function(events, min_date, max_date) {
   #   events[[i, ncol(events)]] = dict[working_id]
   # }
   
-  events$version_num <- events$activityCid %>% as.factor() %>% as.numeric()
-
+  events$version_num <-
+    events$activityCid %>% as.factor() %>% as.numeric()
+  
   return(events)
 }
 
@@ -103,14 +104,22 @@ summarize_events <- function(data) {
       item,
       itemCreditAchieved,
       pageCreditAchieved,
-      pageVariantIndex, 
+      pageVariantIndex,
       activityVariantIndex
     ) %>%
-    filter(verb == "submitted") %>% 
-    group_by(item, pageNumber, version_num, pageVariantIndex, activityVariantIndex) %>%
+    filter(verb == "submitted") %>%
+    group_by(item,
+             pageNumber,
+             version_num,
+             pageVariantIndex,
+             activityVariantIndex) %>%
     mutate(avg = mean(itemCreditAchieved)) %>%
-    ungroup() %>% 
-    add_count(response, item, version_num, pageVariantIndex, activityVariantIndex)
+    ungroup() %>%
+    add_count(response,
+              item,
+              version_num,
+              pageVariantIndex,
+              activityVariantIndex)
   
   return(out)
 }

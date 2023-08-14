@@ -68,7 +68,7 @@ shinyServer(function(input, output, session) {
   })
   
   events <- reactive({
-    if(input$activity_select == "All"){
+    if (input$activity_select == "All") {
       events_full()
     }
     else{
@@ -80,7 +80,7 @@ shinyServer(function(input, output, session) {
   
   #if (observe(length(unlist(query()) > 1))) {
   #  doenetId_list <- reactive({1:length(unlist(query()))})
-    #names(doenetId_list()) <- reactive({events()$doenetId %>% unique()})
+  #names(doenetId_list()) <- reactive({events()$doenetId %>% unique()})
   #}
   
   # this is the hash method
@@ -205,7 +205,7 @@ shinyServer(function(input, output, session) {
   # })
   
   
-
+  
   # ====================PROCESSING DATA=========
   # This block pulls out the events log, which is a dataframe, within a
   # 1 element list within a 1 by 3 dataframe. So df is the frame,
@@ -346,7 +346,7 @@ shinyServer(function(input, output, session) {
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(input$maxtime[1], input$maxtime[2])
   })
@@ -357,7 +357,7 @@ shinyServer(function(input, output, session) {
       ggplot(aes(y = itemCreditAchieved, x = time, color = userId)) +
       geom_step() +
       theme(legend.position = "none") +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Time", y = "Total Credit on Page") +
       xlim(0, input$maxtime[2])
   })
@@ -367,9 +367,9 @@ shinyServer(function(input, output, session) {
     # bins = nrow(distinct(summary_data() , score))
     summary_data() %>%
       filter(!is.na(itemCreditAchieved)) %>%
-      group_by(userId, pageNumber, item) %>% 
-      slice_tail(n = 1) %>% 
-      ungroup() %>% 
+      group_by(userId, pageNumber, item) %>%
+      slice_tail(n = 1) %>%
+      ungroup() %>%
       ggplot(aes(x = itemCreditAchieved)) +
       geom_histogram() +
       facet_grid(pageNumber ~ item) +
@@ -392,7 +392,7 @@ shinyServer(function(input, output, session) {
       ggplot(aes(x = total)) +
       geom_histogram() +
       labs(x = "Total Points", y = "Number of Students", title = "Total Scores on Assignment, By Page") +
-      facet_wrap( ~ pageNumber)
+      facet_wrap(~ pageNumber)
   })
   
   # ========================ATTEMPT BASED PLOTS====================================
@@ -487,7 +487,7 @@ shinyServer(function(input, output, session) {
     subm_by_id <-
       table(q_data$userId, q_data$creditAchieved) %>% as.data.frame()
     solv <-
-      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0,])
+      nrow(subm_by_id[subm_by_id$Var2 == 1 & subm_by_id$Freq > 0, ])
     sub <- n_distinct(subm_by_id$Var1) - solv
     not_att <-
       n_distinct(events()$userId, na.rm = TRUE) - solv - sub
@@ -510,7 +510,7 @@ shinyServer(function(input, output, session) {
     for (i in 1:nrow(subm_by_id)) {
       id <- subm_by_id[i, 1]
       max_score <-
-        max((q_data[q_data$userId == id,])$creditAchieved)
+        max((q_data[q_data$userId == id, ])$creditAchieved)
       subm_by_id[i, 3] <- max_score
     }
     ggplot(subm_by_id, aes(x = as.factor(Freq), y = V3)) +
@@ -521,7 +521,6 @@ shinyServer(function(input, output, session) {
   # ====================WRONG ANSWER BASED PLOTS===================================
   # From here down is wrong answer code
   output$wrong_plot <- renderPlot({
-    
     cleaned_versions() %>%
       filter(verb == "submitted" |
                verb == "answered" |
@@ -547,7 +546,7 @@ shinyServer(function(input, output, session) {
       ungroup() %>%
       ggplot(aes(x = as.character(responseText), y = n)) +
       geom_col() +
-      facet_wrap(~ pageNumber + item, scales = "free") +
+      facet_wrap( ~ pageNumber + item, scales = "free") +
       labs(x = "Wrong Answer", y = "Frequency (if more than 10 times)") +
       coord_flip()
     
@@ -578,18 +577,16 @@ shinyServer(function(input, output, session) {
       filter(responseText != "＿") %>%
       #unnest(responseText) %>%
       group_by(item, pageNumber) %>%
-
+      
       count(responseText) %>%
       filter(n >= 10) %>%
       ungroup() %>%
-      mutate(responseText = fct_reorder(
-        as.character(responseText),
-        n,
-        .desc = TRUE
-      ) %>% fct_rev()) %>%
+      mutate(responseText = fct_reorder(as.character(responseText),
+                                        n,
+                                        .desc = TRUE) %>% fct_rev()) %>%
       ggplot(aes(x = responseText, y = n)) +
       geom_col() +
-      facet_wrap(pageNumber ~ item, 
+      facet_wrap(pageNumber ~ item,
                  scales = "free") +
       labs(x = "Response", y = "Frequency (if more than 10 times)") +
       coord_flip()
@@ -646,7 +643,7 @@ shinyServer(function(input, output, session) {
       # guides(fill=guide_legend(title="Version")) +
       ylim(c(0, 1)) +
       #facet_wrap( ~ pageNumber, labeller=label_bquote(.(levels(as.factor(summary_data_versions$pageNumber)))))
-      facet_wrap(~ pageNumber, labeller = label_bquote(Page ~ .(pageNumber)))
+      facet_wrap( ~ pageNumber, labeller = label_bquote(Page ~ .(pageNumber)))
   })
   # This is time plots faceted by version for person version of graph
   output$time_plot_person_version <- renderPlot({
@@ -698,7 +695,7 @@ shinyServer(function(input, output, session) {
       geom_bar(stat = "summary", fun = "mean") +
       theme(legend.position = "none",
             axis.text.x = element_text(angle = 45, hjust = 1)) +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Question", y = "Time", title = "Average Time per Question")
   })
   #Accumolative time per question by userId
@@ -721,7 +718,7 @@ shinyServer(function(input, output, session) {
       geom_step() +
       theme(legend.position = "none",
             axis.text.x = element_text(angle = 45, hjust = 1)) +
-      facet_wrap(~ pageNumber) +
+      facet_wrap( ~ pageNumber) +
       labs(x = "Question", y = "Time", title = "Time to Question")
   })
   
