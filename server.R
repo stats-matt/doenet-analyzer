@@ -2,17 +2,11 @@ library(shiny)
 library(tidyverse)
 library(jsonlite)
 library(anytime)
-library(dplyr)
-library(tidyr)
 library(scales)
 library(DT)
-library(stringr)
 library(rstudioapi)
 library(memoise)
-library(forcats)
-
-# devtools::install_github("ricardo-bion/ggradar")
-library(ggradar)
+library(ggradar) # devtools::install_github("ricardo-bion/ggradar")
 
 shinyServer(function(input, output, session) {
   source("./functions.R")
@@ -75,8 +69,6 @@ shinyServer(function(input, output, session) {
       events_full() %>% filter(doenetId == input$activity_select)
     }
   })
-  
-  
   
   #if (observe(length(unlist(query()) > 1))) {
   #  doenetId_list <- reactive({1:length(unlist(query()))})

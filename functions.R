@@ -17,7 +17,6 @@ load_data <- function(query) {
   return(tmp_events)
 }
 
-
 #======================clean_events=============================================
 #This function does most of the heavy lifting of cleaning the events data
 #That consists of getting rid of events outside of date range, determining which
@@ -25,29 +24,27 @@ load_data <- function(query) {
 #JSON strings.
 
 clean_events <- function(events, min_date, max_date) {
-  events <- # remove visible verbs to keep the data smallish
+  events <- 
     events %>%
-    filter(verb != "isVisible")
-  
-  events <-
-    #This block adds the timestamp column to the cleaned data set
-    events %>%
-    group_by(userId) %>%
-    mutate(timestamp = anytime(timestamp)) %>%
-    mutate(time_person = timestamp - min(timestamp)) %>%
+    filter(verb != "isVisible") # remove these since not used
+    group_by(userId, doenetId) %>%
+    mutate(timestamp = anytime(timestamp)) %>% #adds timestamp
+    mutate(time_person = timestamp - min(timestamp)) %>% # time since person started activity
     ungroup() %>%
-    mutate(time_activity = timestamp - min(timestamp))# %>%
-  #filter((timestamp > min_date) & (timestamp < max_date))
-  
-  events <- # this separates the context, object, and result columns
-    events %>%
-    mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>%
+    mutate(time_activity = timestamp - min(timestamp)) %>% # time since activie was first loaded 
+    #filter((timestamp > min_date) & (timestamp < max_date))
+    mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>% # separates context
     unnest_wider(new) %>%
-    mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>%
+    mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>% # separates object
     unnest_wider(new) %>%
-    mutate(response = map(result, ~ fromJSON(.))) %>%
+    mutate(response = map(result, ~ fromJSON(.))) %>% # separates results
     unnest_wider(response)
+    events$version_num <-
+      events$activityCid %>% as.factor() %>% as.numeric()
+    return(events)
+}
   
+  # old code, maybe can be deleted
   #To solve the problem of multiple types in the response column we used code from
   # the following stackoverflow link:
   # https://stackoverflow.com/questions/27668266/dplyr-change-many-data-types
@@ -59,8 +56,6 @@ clean_events <- function(events, min_date, max_date) {
   # events <-
   #   events %>%
   #   filter(!is.na(documentCreditAchieved))
-  
-  
   
   # this has been replaced by the line below it
   # events$version_num <-  NA
@@ -74,11 +69,7 @@ clean_events <- function(events, min_date, max_date) {
   #   events[[i, ncol(events)]] = dict[working_id]
   # }
   
-  events$version_num <-
-    events$activityCid %>% as.factor() %>% as.numeric()
-  
-  return(events)
-}
+
 
 #=================summarize_events==============================================
 #This creates the summary data

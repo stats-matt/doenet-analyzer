@@ -1,16 +1,5 @@
 # enableBookmarking(store = "url")
 
-# library(shiny)
-# library(tidyverse)
-# library(jsonlite)
-# library(anytime)
-# library(dplyr)
-# library(scales)
-# library(DT)
-#
-# # devtools::install_github("ricardo-bion/ggradar")
-# library(ggradar)
-
 source("tabs.R")
 
 shinyUI(fluidPage(
@@ -18,8 +7,8 @@ shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       width = 3,
-      actionButton("update", "Update Data", icon = icon("sync")),
-      downloadButton("downloadData", "Download Data"),
+      actionButton("update", "Update Data", icon = icon("sync")), # probably not needed
+      downloadButton("downloadData", "Download Data"), # maybe not needed?? or move to data tab?
       selectInput("activity_select",
                   "Select an activity:",
                   choices = NULL),

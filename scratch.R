@@ -5,16 +5,10 @@ library(shiny)
 library(tidyverse)
 library(jsonlite)
 library(anytime)
-library(dplyr)
 library(DT)
-#install.packages("promises")
-#install.packages("future")
 library(promises)
 library(future)
-
-#install.packages("memoise")
 library(memoise)
-
 
 source("functions.R")
 
@@ -31,8 +25,6 @@ raw <-  stream_in(file(
 
 # clean the data, test the functions
 events <-  raw$events[[1]]
-#events <- read.csv("base.csv")
-#events <- events[1:100,]
 dates <- pull_dates(events)
 versions <- pull_versions(events)
 min_date <- min(dates)

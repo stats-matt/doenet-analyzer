@@ -1,4 +1,5 @@
 # tab for all content in doenetid ----
+
 activity_tab <-
   tabPanel(
     "Analyze activity/content",
@@ -64,6 +65,7 @@ problem_tab <-
         br(),
         plotOutput("wrong_plot")
       ),
+      # radar graph - not working now
       # tabPanel(
       #   "Radar graph",
       #   "This is a radar graph of progress across all problems - note this is a work in progress",
