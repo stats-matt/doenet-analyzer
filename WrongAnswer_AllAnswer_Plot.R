@@ -10,8 +10,8 @@ library(ggplot2)
 library(plotly)
 
 # load data (put in a doenetid - good doenetids to use are on slack)
+#doenetid <- "_TETkqoYS3slQaDwjqkMrX"
 doenetid <- "_TETkqoYS3slQaDwjqkMrX"
-#doenetid <- "_ds4TPv9RAI9b3DnYvgROo"
 #doenetid <- "_dKAX4QFX3JGXILGwaApZY"
 raw <-  stream_in(file(
   paste0(
@@ -22,8 +22,6 @@ raw <-  stream_in(file(
 
 # clean the data, test the functions
 events <-  raw$events[[1]]
-#events <- read.csv("base.csv")
-#events <- events[1:100,]
 dates <- pull_dates(events)
 versions <- pull_versions(events)
 min_date <- min(dates)
@@ -31,21 +29,30 @@ max_date <- max(dates)
 cleaned_versions <- clean_events(events, min(dates), max(dates))
 
 ui <- fluidPage(
-  fluidRow(
-    column(6, selectInput("page_dropdown", "Select Page", "")),
-    column(6, selectInput("item_dropdown", "Select Item", ""))
-  ),
-  sliderInput("integer", 
-              "Most Frequent Wrong Answers",
-              min = 0, 
-              max = 0,
-              value = 0),
-  # Render the plot
-  plotlyOutput("wrong_plot")
+  tabPanel(
+    fluidRow(
+      column(6, selectInput("page_dropdown", "Select Page", "")),
+      column(6, selectInput("item_dropdown", "Select Item", ""))
+    ),
+    sliderInput("integer", "Most Frequent Wrong Answers",
+                min = 0, 
+                max = 0,
+                value = 0),
+    sliderInput("integer_slider", "Most Frequent Answers",
+                min = 0, 
+                max = 0,
+                value = 0),
+    # Render the plot
+    plotOutput("all_answers_plot"),
+    # Render the plot
+    plotOutput("wrong_plot")
+  )
 )
 
 
 server <- function(input, output, session) {
+  
+#==================Back-end of page and item dropdown creation==================
   
   # items for dropdown menu dynamical generation
   facet_naming_item <- function() {
@@ -82,6 +89,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "item_dropdown", choices = facet_naming_item())
     updateSelectInput(session, "page_dropdown", choices = facet_naming_page())
   })
+  
   # Observe changes in the item and page dropdowns
   max_value_sliderdf <- reactiveVal(0)  # Use a reactiveVal to store the max value
   observe({
@@ -94,8 +102,8 @@ server <- function(input, output, session) {
       filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
       filter(responseText != "NULL" & responseText != "＿") %>%
       filter(itemCreditAchieved < 1) %>%
-      filter(item == gsub("Item ", "", item_selected)) %>%
-      filter(pageNumber == gsub("Page ", "", page_selected)) %>%
+      filter(item == paste0("Page ", item_selected)) %>%
+      filter(pageNumber == paste0("Page ", page_selected)) %>%
       group_by(pageNumber, item, responseText) %>%  
       summarise(n = n()) %>%  
       filter(n >= 10) %>%
@@ -110,14 +118,22 @@ server <- function(input, output, session) {
       max_value_sliderdf(max(a$n))  # Update the reactive value
       # Update the sliderInput dynamically
       updateSliderInput(session, "integer", max = max_value_sliderdf(), value = max_value_sliderdf())
+      updateSliderInput(session, "integer_slider", max = max_value_sliderdf(), value = max_value_sliderdf())
+      
     } else {
       max_value_sliderdf(0)  # Reset the reactive value to 0
       # If 'a' is empty, set the maximum and default value of the slider to 0 or any other appropriate default value
       updateSliderInput(session, "integer", max = 0, value = 0)
+      updateSliderInput(session, "integer_slider", max = 0, value = 0)
+      
     }
   })
+  
+  
+  
+#==========================Plot outputs=========================================
   # Inside the output$wrong_plot renderPlot function
-  output$wrong_plot <- renderPlotly({
+  output$wrong_plot <- renderPlot({
     item_selected <- input$item_dropdown
     page_selected <- input$page_dropdown
     slider_selected <- input$integer
@@ -125,14 +141,14 @@ server <- function(input, output, session) {
     cleaned_data <- cleaned_versions  # Extract the value from the reactive expression
     
     # Filter the dataset based on selected item and page
-    filtered_data_wrong <- cleaned_data %>%
+    filtered_data <- cleaned_data %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
       select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
       filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
       filter(responseText != "NULL" & responseText != "＿") %>%
       filter(itemCreditAchieved < 1) %>%
-      filter(item == gsub("Item ", "", item_selected)) %>%
-      filter(pageNumber == gsub("Page ", "", page_selected)) %>%
+      filter(item == paste0("Page ", item_selected)) %>%
+      filter(pageNumber == paste0("Page ", page_selected)) %>%
       group_by(responseText) %>%  
       summarise(n = n()) %>%  
       filter(n >= 10) %>%
@@ -144,28 +160,83 @@ server <- function(input, output, session) {
         .desc = TRUE
       ) %>% fct_rev())
     
-    if (nrow(filtered_data_wrong) == 0) {
-      # Create an empty plot if no data points are available
-      return(plot_ly(x = NULL, y = NULL, type = "bar"))
+    if (nrow(filtered_data) == 0) {
+      # Display a message to the user if no data points for the selected combination
+      return(plot(0, main = "No data for selected combination",
+                  xlab = "", 
+                  ylab = ""))
     } else {
       # Generate the plot using ggplot2
-      return(plot_ly(data = filtered_data_wrong, 
-                     x = ~n, 
-                     y = ~responseText, 
-                     type = "bar") %>%
-               layout(
-                 yaxis = list(title = "Wrong Answer"),  # Swap x-axis and y-axis titles
-                 xaxis = list(title = "Frequency (if more than 10 times)"),  # Swap x-axis and y-axis titles
-                 title = paste("Graph of",
-                               page_selected,
-                               "With",
-                               item_selected),
-                 barmode = "stack"  # Add this line to adjust bar mode if needed
-               ))
-      
+      ggplot(filtered_data, aes(x = responseText, y = n)) +
+        geom_col() +
+        labs(x = "Wrong Answer", 
+             y = "Frequency (if more than 10 times)",
+             title = paste("Graph of",
+                           page_selected,
+                           "With",
+                           item_selected)) +
+        coord_flip() +
+        theme(
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.title = element_text(hjust = 0.5)
+        )
     }
   })
-  
+  output$all_answers_plot <- renderPlot({
+    
+    item_selected <- input$item_dropdown
+    page_selected <- input$page_dropdown
+    slider_selected <- input$integer
+    
+    cleaned_data <- cleaned_versions  # Extract the value from the reactive expression
+    
+    filtered_data <- cleaned_data %>%
+      filter(verb == "submitted" |
+               verb == "answered" |
+               verb == "selected") %>% # selected are choice inputs
+      select(item, pageNumber, componentName, responseText) %>%
+      filter(!is.na(pageNumber)) %>% 
+      filter(!is.na(item)) %>% 
+      filter(responseText != "NULL") %>%
+      filter(responseText != "＿") %>% 
+      filter(item == paste0("Page ", item_selected)) %>%
+      filter(pageNumber == paste0("Page ", page_selected)) %>%
+      group_by(item, pageNumber) %>% 
+      count(responseText) %>%
+      filter(n >= 10) %>% 
+      ungroup() %>%
+      mutate(responseText = fct_reorder(
+        as.character(responseText),
+        n,
+        .desc = TRUE
+      ) %>% fct_rev()) 
+    
+    if (nrow(filtered_data) == 0) {
+      # Display a message to the user if no data points for the selected combination
+      return(plot(0, main = "No data for selected combination",
+                  xlab = "", 
+                  ylab = ""))
+    } else {
+      # Generate the plot using ggplot2
+      ggplot(filtered_data, aes(x = responseText, y = n)) +
+        geom_col() +
+        labs(x = "All Answer", 
+             y = "Frequency (if more than 10 times)",
+             title = paste("Graph of",
+                           page_selected,
+                           "With",
+                           item_selected)) +
+        coord_flip() +
+        theme(
+          strip.background = element_blank(),
+          strip.text.x = element_blank(),
+          plot.title = element_text(hjust = 0.5),
+          axis.title.x = element_text(hjust = 1)
+        )
+    }
+    
+  })
 }
 
 shinyApp(ui, server)
