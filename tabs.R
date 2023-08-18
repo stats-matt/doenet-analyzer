@@ -10,6 +10,7 @@ activity_tab <-
         "Here are the frequencies of the total scores achieved by all students",
         br(),
         br(),
+        #textOutput("num_ids"),
         plotOutput("hist_total")
       ),
       tabPanel(
@@ -110,22 +111,6 @@ problem_tab <-
       #          ))
     )
   )
-
-
-# tab for analysis by student ----
-# student_tab <-
-#   tabPanel(
-#     "Analyze Students",
-#     "These tabs provide feedback on students",
-#     tabsetPanel(
-#       tabPanel("Time Plot", plotOutput("time_plot")),
-#       tabPanel("Time Plot from start", plotOutput("time_plot_s"))
-#     )
-#   )
-
-# numericInput("maxtime_set", "Slider maximum time:", 80000),
-# uiOutput("slider")
-# ),))
 
 # tab for analyzing datasets ----
 data_tab <-

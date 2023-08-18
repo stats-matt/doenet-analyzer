@@ -16,6 +16,7 @@ source("functions.R")
 #doenetid <- "_TETkqoYS3slQaDwjqkMrX"
 #doenetid <- "_PY82WGbGMv9FIVDzJdxgZ"
 doenetid <- "_ToZ1Ot0vL3eRyuai4Bkkd"
+#doenetid <- "_ds4TPv9RAI9b3DnYvgROo"
 raw <-  stream_in(file(
   paste0(
     "https://www.doenet.org/api/getEventData.php?doenetId[]=",
@@ -30,6 +31,7 @@ versions <- pull_versions(events)
 min_date <- min(dates)
 max_date <- max(dates)
 cleaned_versions <- clean_events(events, min(dates), max(dates))
+cleaned_versions <- clean_events(events)
 summary_data_versions <- summarize_events(cleaned_versions)
 cleaned <- version_filter(cleaned_versions, 1)
 summary_data <- summarize_events(cleaned)

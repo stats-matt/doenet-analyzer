@@ -1,7 +1,3 @@
-#Functions
-#These are functions used by the server for the Doenet stats analyzer
-
-#======================load data=============================================
 load_data <- function(query) {
   tmp_events <- data.frame()
   for (i in 1:length(unlist(query))) {
@@ -17,6 +13,7 @@ load_data <- function(query) {
   return(tmp_events)
 }
 
+
 #======================clean_events=============================================
 #This function does most of the heavy lifting of cleaning the events data
 #That consists of getting rid of events outside of date range, determining which
@@ -26,49 +23,23 @@ load_data <- function(query) {
 clean_events <- function(events, min_date, max_date) {
   events <- 
     events %>%
-    filter(verb != "isVisible") # remove these since not used
+    filter(verb != "isVisible") %>%  # remove these since not used
     group_by(userId, doenetId) %>%
     mutate(timestamp = anytime(timestamp)) %>% #adds timestamp
     mutate(time_person = timestamp - min(timestamp)) %>% # time since person started activity
     ungroup() %>%
     mutate(time_activity = timestamp - min(timestamp)) %>% # time since activie was first loaded 
-    #filter((timestamp > min_date) & (timestamp < max_date))
+    #filter((timestamp > min_date) & (timestamp < max_date)) %>% # something's wrong with date/time filter
     mutate(new = map(context, ~ fromJSON(.) %>% as.data.frame())) %>% # separates context
     unnest_wider(new) %>%
     mutate(new = map(object, ~ fromJSON(.) %>% as.data.frame())) %>% # separates object
     unnest_wider(new) %>%
     mutate(response = map(result, ~ fromJSON(.))) %>% # separates results
     unnest_wider(response)
-    events$version_num <-
-      events$activityCid %>% as.factor() %>% as.numeric()
-    return(events)
+  events$version_num <-
+    events$activityCid %>% as.factor() %>% as.numeric()
+  return(events)
 }
-  
-  # old code, maybe can be deleted
-  #To solve the problem of multiple types in the response column we used code from
-  # the following stackoverflow link:
-  # https://stackoverflow.com/questions/27668266/dplyr-change-many-data-types
-  #
-  # events <-
-  #   events %>%
-  #   separate(componentName, into = c(NA, "section", "answer", "type"))
-  #
-  # events <-
-  #   events %>%
-  #   filter(!is.na(documentCreditAchieved))
-  
-  # this has been replaced by the line below it
-  # events$version_num <-  NA
-  # processed <-
-  #   events %>% group_by(activityCid) %>% summarize(min_stamp = min(timestamp))
-  # processed <-  processed[order(processed$min_stamp),]
-  # dict <- c(1:nrow(processed))
-  # names(dict) = processed$activityCid
-  # for (i in (1:(nrow(events)))) {
-  #   working_id = events[[i, 4]]
-  #   events[[i, ncol(events)]] = dict[working_id]
-  # }
-  
 
 
 #=================summarize_events==============================================
@@ -114,19 +85,15 @@ summarize_events <- function(data) {
   
   return(out)
 }
-#====================pull_dates=================================================
-pull_dates <- function(events) {
-  out <- events %>% select(timestamp)
-  out <- anytime(out$timestamp)
-  return(out)
-}
-#==================pull_versions================================================
-pull_versions <- function(events) {
-  out <- events %>% distinct(activityCid) %>% nrow()
-  return(out)
-}
+
 #================version_filter=================================================
 version_filter <- function(cleaned, input_version) {
   out <- cleaned #%>% filter(cleaned$version_num == input_version)
+  return(out)
+}
+
+#==================pull_versions================================================
+pull_versions <- function(events) {
+  out <- events %>% distinct(activityCid) %>% nrow()
   return(out)
 }
