@@ -50,31 +50,67 @@ problem_tab <-
                )),
       tabPanel(
         "All Answers",
-        "This plot shows a representation of all submitted answers",
+        h4("How to Use the Graph:"),
+        p("The graph displays common answers that are shared among students. 
+        An answer is considered \"common\" if its frequency is greater than ten. 
+        Here's how you can utilize the graph:"),
+        tags$ol(
+          tags$li("To focus on a specific page and item combination, use the 
+                  dropdown menu provided. Select the desired page and item, and 
+                  the graph will adjust accordingly."),
+          tags$li("The slider allows you to control the maximum frequency of 
+                  answers displayed in the graph. Slide it to a lower value if 
+                  you want to exclude highly common answers and focus on less 
+                  frequent responses."),
+          tags$li("Keep in mind that if a particular answer is significantly 
+                  more common than others, adjusting the slider towards zero 
+                  will cause that answer to disappear from the graph.")),
         br(),
         br(),
-        plotOutput("all_answers_plot")
+      fluidRow(
+        column(6, selectInput("page_dropdown_all", "Select Page", "")),
+        column(6, selectInput("item_dropdown_all", "Select Item", ""))
       ),
+      sliderInput("integer_slider_all", "Most Frequent Answers",
+                  min = 0,
+                  max = 0,
+                  value = 0),
+      # # Render the plot
+      plotlyOutput("all_answers_plot")),
       tabPanel("Text tab",
                br(),
                br(),
                DT::DTOutput("all_answers_text")),
       tabPanel(
         "Wrong Answers",
-        "This plot shows the most commonly entered wrong answer for each question",
+        h4("How to Use the Graph:"),
+        p("The graph displays common answers that are shared among students. 
+        An answer is considered \"common\" if its frequency is greater than ten. 
+        Here's how you can utilize the graph:"),
+        tags$ol(
+          tags$li("To focus on a specific page and item combination, use the 
+                  dropdown menu provided. Select the desired page and item, and 
+                  the graph will adjust accordingly."),
+          tags$li("The slider allows you to control the maximum frequency of 
+                  answers displayed in the graph. Slide it to a lower value if 
+                  you want to exclude highly common answers and focus on less 
+                  frequent responses."),
+          tags$li("Keep in mind that if a particular answer is significantly 
+                  more common than others, adjusting the slider towards zero 
+                  will cause that answer to disappear from the graph.")),
         br(),
         br(),
         fluidRow(
           column(6, selectInput("page_dropdown", "Select Page", "")),
           column(6, selectInput("item_dropdown", "Select Item", ""))
         ),
-        sliderInput("integer", "Top 10 Most Frequent Wrong Answers",
+        sliderInput("slider_wrong", 
+                    "Most Frequent Wrong Answers",
                     min = 0, 
                     max = 0,
                     value = 0),
         # Render the plot
-        plotOutput("wrong_plot")
-      ),
+        plotlyOutput("wrong_plot")),
       # tabPanel(
       #   "Radar graph",
       #   "This is a radar graph of progress across all problems - note this is a work in progress",
@@ -109,16 +145,68 @@ problem_tab <-
               "Mean" = "mean")
           ),
           column(12, plotOutput("hist_subm_attempt")),
-          column(12, plotOutput("hist_subm_version"))
+          column(12, plotOutput("hist_subm_version")))),
+      tabPanel(
+        "Free Response Questions (FRQ)",
+          h4("How Do I Interpret The Graphs?"),
+          p("The subsequent graphs are employed to analyze \"unstructured\" text 
+      found in free-response questions. \"Graph 1\" and \"Graph 2\" are 
+      webs/networks that illustrate the connections between words or answers 
+      within a free-response question (FRQ). The strength of the connection 
+      between words or answers in the network is indicated by the color cyan. 
+      The darker the color, the stronger the connection. The color of the 
+      connection also represents the frequency with which a word has been 
+      linked to others. For instance, pastel cyan might indicate that the 
+      words were linked three times, while dark cyan could indicate a 
+      connection frequency of 2000 times. \"Word Cloud\" is a collection 
+      of words that depicts the occurrences of words or answers. 
+      The larger the word or answer, the more common it is for that term to 
+      appear. Conversely, the smaller the word or answer, the rarer the 
+      likelihood of encountering it."),
+        h4("NOTES:"),
+        tags$ol(
+          tags$li("\"Graph 1\", \"Graph 2\", and the \"Word Cloud\" graphs are 
+              distinct plots that analyze the data differently. Although 
+              \"Graph 1\" and \"Graph 2\" might appear similar, \"Graph 1\" 
+              excludes common words typically found in the English language; 
+              words like \"and\", \"I\", \"it\", \"can\", etc., are all 
+              omitted in \"Graph 1\", whereas \"Graph 2\" includes these 
+              words."),
+          tags$li("The class size slider does not directly reflect the number of 
+              students in a class. Instead, it is used during the calculation 
+              of relationships between each word."),
+          tags$li("The dropdown menu includes only three question types based on 
+              the tags associated with the questions at the time of coding. 
+              These three types are related to Free-Response Questions (FRQs), 
+              thus they are included in the dropdown menu."),
+          tags$li("The graphs are not intended for grading FRQs; rather, they 
+              provide a rapid overview of common terms or words in students' 
+              answers within an FRQ.")
+        ),
+        sliderInput("wordcloud_int", 
+                    "Class size",
+                    min = 1, 
+                    max = 1,
+                    value = 1),
+        selectInput("componentType_dropdown", 
+                    "Select Type Of Question",
+                    choices = c("Answer",
+                                "Choice Input",
+                                "Text Input")),
+        tabsetPanel(
+          tabPanel("Graph 1", plotOutput("graph1")),
+          tabPanel("Graph 2", plotOutput("graph2")),
+          tabPanel("Word Cloud", plotOutput("wordcloud"))
         )
-      )#,
+      )
+    )
+      #,
       # tabPanel("Time per Question",
       #          fluidRow(
       #            column(12, plotOutput("time_to_question_av")),
       #            column(12, plotOutput("time_to_question"))
       #          ))
     )
-  )
 
 
 # tab for analysis by student ----

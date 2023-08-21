@@ -10,6 +10,12 @@ library(stringr)
 library(rstudioapi)
 library(memoise)
 library(forcats)
+library(plotly)
+library(tidytext)
+library(igraph)
+library(ggraph)
+library(wordcloud)
+library(tm)  # Add the tm package for pairwise_cou
 
 # devtools::install_github("ricardo-bion/ggradar")
 library(ggradar)
@@ -462,93 +468,57 @@ shinyServer(function(input, output, session) {
   
   # ====================WRONG ANSWER BASED PLOTS===================================
   
-  # Define a reactive expression for cleaned_data
-  cleaned_data <- reactive({
-    cleaned_versions()
-  })
+  # facet_naming_item() is a function that generates the choices of items
+  # in a dropdown menu by filtering the given data from a doenet ID
   
-  # items for dropdown menu dynamical generation
   facet_naming_item <- function() {
-    testing_item <- cleaned_data() %>%
+    testing_item <- cleaned_versions() %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
-      select(item, pageNumber, componentName, responseText) %>%
-      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
-               responseText != "NULL" & responseText != "＿") %>%
-      group_by(item, pageNumber) %>%
-      count(responseText) %>%
-      ungroup() %>%
+      select(item) %>%
+      filter(!is.na(item)) %>%
       distinct(item)
     
     natural_naming_items <- paste0("Item ", testing_item$item)
     return(natural_naming_items)
   }
-  # pages for dropdown menu dynamical generation
+  
+  # facet_naming_page() is a function that generates the choices of pages
+  # in a dropdown menu by filtering the given data from a doenet ID
+  
   facet_naming_page <- function() {
-    testing_page <- cleaned_data() %>%
+    testing_page <- cleaned_versions() %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
-      select(item, pageNumber, componentName, responseText) %>%
-      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
-               responseText != "NULL" & responseText != "＿") %>%
-      group_by(item, pageNumber) %>%
-      count(responseText) %>%
-      ungroup() %>%
+      select(pageNumber) %>%
+      filter(!is.na(pageNumber)) %>%
       distinct(pageNumber)
     
     natural_naming_page <- paste0("Page ", testing_page$pageNumber)
     return(natural_naming_page)
   }
-  # Observe changes in the item dropdown and update choices for page dropdown accordingly
-  observeEvent(input$item_dropdown, {
-    item_choices <- facet_naming_item()
-    updateSelectInput(session, "item_dropdown", choices = item_choices)
-    page_choices <- facet_naming_page()
+  
+  # The following observe bock observes changes in the dropdown menus for both
+  # pages and items and updates the choices according to facet_naming_item()
+  # facet_naming_page() for wrong answer plot 
+  
+  observe({
+    updateSelectInput(session, "item_dropdown", choices = facet_naming_item())
     updateSelectInput(session, "page_dropdown", choices = facet_naming_page())
   })
-  # Observe changes in the item and page dropdowns
-  max_value_sliderdf <- reactiveVal(0)  # Use a reactiveVal to store the max value
+  
+  # max_value_sliderdf() is a function that sets zero as the maximum value of
+  # the slider for frequency of wrong answers plot and all answers plot
+  
+  max_value_sliderdf <- reactiveVal(0)
+  
+  # The following observe block observes the changes happening to the dropdown
+  # menus for both pages and items and updates the maximum value of the slider 
+  # for a given page and item for wrong answer plot
+  
   observe({
     item_selected <- input$item_dropdown
     page_selected <- input$page_dropdown
     
-    a <- cleaned_data() %>%
-      filter(verb %in% c("submitted", "answered", "selected")) %>%
-      select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
-      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
-      filter(responseText != "NULL" & responseText != "＿") %>%
-      filter(itemCreditAchieved < 1) %>%
-      filter(item == gsub("Item ", "", item_selected)) %>%
-      filter(pageNumber == gsub("Page ", "", page_selected)) %>%
-      group_by(pageNumber, item, responseText) %>%  
-      summarise(n = n()) %>%  
-      filter(n >= 10) %>%
-      ungroup() %>% 
-      mutate(responseText = fct_reorder(
-        as.character(responseText),
-        n,
-        .desc = TRUE
-      ) %>% fct_rev())
-    
-    if (nrow(a) > 0) {
-      max_value_sliderdf(max(a$n))  # Update the reactive value
-      # Update the sliderInput dynamically
-      updateSliderInput(session, "integer", max = max_value_sliderdf(), value = max_value_sliderdf())
-    } else {
-      max_value_sliderdf(0)  # Reset the reactive value to 0
-      # If 'a' is empty, set the maximum and default value of the slider to 0 or any other appropriate default value
-      updateSliderInput(session, "integer", max = 0, value = 0)
-    }
-  })
-  # Inside the output$wrong_plot renderPlot function
-  output$wrong_plot <- renderPlot({
-    
-    # Get the selected input values outside the reactive context
-    item_selected <- input$item_dropdown
-    page_selected <- input$page_dropdown
-    slider_selected <- input$integer
-    
-    # Define a reactive expression for filtered_data
-    filtered_data <- reactive({
-      cleaned_data() %>%
+    wrong <- cleaned_versions() %>%
         filter(verb %in% c("submitted", "answered", "selected")) %>%
         select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
         filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
@@ -559,36 +529,68 @@ shinyServer(function(input, output, session) {
         group_by(responseText) %>%  
         summarise(n = n()) %>%  
         filter(n >= 10) %>%
-        filter(n %in% (0:slider_selected)) %>%
-        ungroup() %>% 
-        mutate(responseText = fct_reorder(
-          as.character(responseText),
-          n,
-          .desc = TRUE
-        ) %>% fct_rev())
-    })
+        ungroup() 
     
-    if (nrow(filtered_data()) == 0) {
-      # Display a message to the user if no data points for the selected combination
-      return(plot(0, main = "No data for selected combination",
-                  xlab = "", 
-                  ylab = ""))
+    if (nrow(wrong) > 0) {
+      max_value_slider <- max(wrong$n)
+      updateSliderInput(session, "slider_wrong", max = max_value_slider, value = max_value_slider)
     } else {
-      # Generate the plot using ggplot2
-      ggplot(filtered_data(), aes(x = responseText, y = n)) +
-        geom_col() +
-        labs(x = "Wrong Answer", 
-             y = "Frequency (if more than 10 times)",
-             title = paste("Graph of",
-                           page_selected,
-                           "With",
-                           item_selected)) +
-        coord_flip() +
-        theme(
-          strip.background = element_blank(),
-          strip.text.x = element_blank(),
-          plot.title = element_text(hjust = 0.5)
-        )
+      updateSliderInput(session, "slider_wrong", max = 0, value = 0)
+    }
+  })
+  
+  # The following block of code's output ia a rendered plotly graph of wrong
+  # answers
+  
+  output$wrong_plot <- renderPlotly({
+    item_selected <- input$item_dropdown
+    page_selected <- input$page_dropdown
+    slider_selected <- input$slider_wrong
+
+    filtered_data_wrong <- cleaned_versions() %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
+      select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
+      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
+      filter(responseText != "NULL" & responseText != "＿") %>%
+      filter(itemCreditAchieved < 1) %>%
+      filter(item == gsub("Item ", "", item_selected)) %>%
+      filter(pageNumber == gsub("Page ", "", page_selected)) %>%
+      group_by(responseText) %>%  
+      summarise(n = n()) %>%  
+      filter(n >= 10) %>%
+      filter(n %in% (0:slider_selected)) %>%
+      ungroup() %>% 
+      mutate(responseText = fct_reorder(
+        as.character(responseText),
+        n,
+        .desc = TRUE
+      ) %>% fct_rev())
+
+    if (nrow(filtered_data_wrong) == 0) {
+      return(plot_ly(x = NULL, y = NULL, type = "bar") %>%
+               layout(
+                 yaxis = list(title = "All Answer"), 
+                 xaxis = list(title = "Frequency (if more than 10 times)"), 
+                 title = paste("No Possible Data To Analyze",
+                               page_selected,
+                               "With",
+                               item_selected),
+                 barmode = "stack"))
+    } else {
+      return(plot_ly(data = filtered_data_wrong,
+                     x = ~n,
+                     y = ~responseText,
+                     type = "bar") %>%
+               layout(
+                 yaxis = list(title = "Wrong Answer"), 
+                 xaxis = list(title = "Frequency (if more than 10 times)"),  
+                 title = paste("Graph of",
+                               page_selected,
+                               "With",
+                               item_selected),
+                 barmode = "stack"  
+               ))
+
     }
   })
   
@@ -620,33 +622,169 @@ shinyServer(function(input, output, session) {
   # })
   
   # ====================ALL ANSWER PLOTS===================================
-  output$all_answers_plot <- renderPlot({
-    cleaned_versions() %>%
-      filter(verb == "submitted" |
-               verb == "answered" |
-               verb == "selected") %>% # selected are choice inputs
+  
+  # The following observe bock observes changes in the dropdown menus for both
+  # pages and items and updates the choices according to facet_naming_item()
+  # facet_naming_page() for all answer plot 
+  
+  observe({
+    updateSelectInput(session, "item_dropdown_all", choices = facet_naming_item())
+    updateSelectInput(session, "page_dropdown_all", choices = facet_naming_page())
+  })
+  
+  # The following observe block observes the changes happening to the dropdown
+  # menus for both pages and items and updates the maximum value of the slider 
+  # for a given page and item for all answer plot
+  
+  observe({
+    item_selected_all <- input$item_dropdown
+    page_selected_all <- input$page_dropdown
+    
+    clean_data <- cleaned_versions()
+    
+    all_answer <- clean_data %>%
+        filter(verb == "submitted" |
+                 verb == "answered" |
+                 verb == "selected") %>% # selected are choice inputs
+        select(item, pageNumber, componentName, responseText) %>%
+        filter(!is.na(pageNumber)) %>%
+        filter(!is.na(item)) %>%
+        filter(responseText != "NULL") %>%
+        filter(responseText != "＿") %>%
+        filter(item == gsub("Item ", "", item_selected_all)) %>%
+        filter(pageNumber == gsub("Page ", "", page_selected_all)) %>%
+      group_by(pageNumber, item, responseText) %>%
+      summarise(n = n()) %>%
+        filter(n >= 10) %>%
+        ungroup() %>%
+        mutate(responseText = fct_reorder(
+          as.character(responseText),
+          n,
+          .desc = TRUE
+        ) %>% fct_rev())
+    
+    if (nrow(all_answer) > 0) {
+      max_value_sliderdf(max(all_answer$n))
+      updateSliderInput(session, "integer_slider_all", max = max_value_sliderdf(), value = max_value_sliderdf())
+    } else {
+      max_value_sliderdf(0)  # Reset the reactive value to 0
+      updateSliderInput(session, "integer_slider_all", max = 0, value = 0)
+    }
+  })
+  
+  # The following block of code's output ia a rendered plotly graph of all
+  # answers
+  
+  output$all_answers_plot <- renderPlotly({
+    item_selected_all <- input$item_dropdown_all
+    page_selected_all <- input$page_dropdown_all
+    slider_selected_all <- input$integer_slider_all
+    
+    clean_data <- cleaned_versions()
+    
+    filtered_data_all <- clean_data %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
       select(item, pageNumber, componentName, responseText) %>%
-      filter(!is.na(pageNumber)) %>% 
-      filter(!is.na(item)) %>% 
+      filter(!is.na(pageNumber)) %>%
+      filter(!is.na(item)) %>%
       filter(responseText != "NULL") %>%
-      filter(responseText != "＿") %>% 
-      #unnest(responseText) %>% 
-      group_by(item, pageNumber) %>% 
-      count(responseText) %>%
-      filter(n >= 10) %>% 
+      filter(responseText != "＿") %>%
+      filter(item == gsub("Item ", "", item_selected_all)) %>%
+      filter(pageNumber == gsub("Page ", "", page_selected_all)) %>%
+      group_by(responseText) %>%
+      summarise(n = n()) %>%
+      filter(n >= 10) %>%
+      filter(n %in% (0:slider_selected_all)) %>%
       ungroup() %>%
       mutate(responseText = fct_reorder(
         as.character(responseText),
         n,
         .desc = TRUE
-      ) %>% fct_rev()) %>%
-      ggplot(aes(x = responseText, y = n)) +
-      geom_col() +
-      facet_wrap(pageNumber ~ item, 
-                 scales = "free") +
-      labs(x = "Response", y = "Frequency (if more than 10 times)") +
-      coord_flip()
+      ) %>% fct_rev())
+    
+    if (nrow(filtered_data_all) == 0) {
+      return(plot_ly(x = NULL, y = NULL, type = "bar") %>%
+               layout(
+                 yaxis = list(title = "All Answer"),
+                 xaxis = list(title = "Frequency (if more than 10 times)"),
+                 title = paste("No Possible Data To Analyze",
+                               page_selected_all,
+                               "With",
+                               item_selected_all),
+                 barmode = "stack"
+               ))
+    } else {
+      # Create a Plotly bar plot
+      return(plot_ly(data = filtered_data_all,
+                     x = ~n,
+                     y = ~responseText,
+                     type = "bar") %>%
+               layout(
+                 yaxis = list(title = "All Answer"),
+                 xaxis = list(title = "Frequency (if more than 10 times)"),
+                 title = paste("Graph of",
+                               page_selected_all,
+                               "With",
+                               item_selected_all),
+                 barmode = "stack"
+               ))
+    }
   })
+  
+  
+  # output$all_answers_plot <- renderPlot({
+  #   
+  #   item_selected <- input$item_dropdown
+  #   page_selected <- input$page_dropdown
+  #   slider_selected <- input$integer
+  #   
+  #   cleaned_data <- cleaned_versions  # Extract the value from the reactive expression
+  #   
+  #   filtered_data <- cleaned_data %>%
+  #     filter(verb == "submitted" |
+  #              verb == "answered" |
+  #              verb == "selected") %>% # selected are choice inputs
+  #     select(item, pageNumber, componentName, responseText) %>%
+  #     filter(!is.na(pageNumber)) %>% 
+  #     filter(!is.na(item)) %>% 
+  #     filter(responseText != "NULL") %>%
+  #     filter(responseText != "＿") %>% 
+  #     filter(item == gsub("Item ", "", item_selected)) %>%
+  #     filter(pageNumber == gsub("Page ", "", page_selected)) %>%
+  #     group_by(item, pageNumber) %>% 
+  #     count(responseText) %>%
+  #     filter(n >= 10) %>% 
+  #     ungroup() %>%
+  #     mutate(responseText = fct_reorder(
+  #       as.character(responseText),
+  #       n,
+  #       .desc = TRUE
+  #     ) %>% fct_rev()) 
+  #   
+  #   if (nrow(filtered_data) == 0) {
+  #     # Display a message to the user if no data points for the selected combination
+  #     return(plot(0, main = "No data for selected combination",
+  #                 xlab = "", 
+  #                 ylab = ""))
+  #   } else {
+  #     # Generate the plot using ggplot2
+  #     ggplot(filtered_data, aes(x = responseText, y = n)) +
+  #       geom_col() +
+  #       labs(x = "All Answer", 
+  #            y = "Frequency (if more than 10 times)",
+  #            title = paste("Graph of",
+  #                          page_selected,
+  #                          "With",
+  #                          item_selected)) +
+  #       coord_flip() +
+  #       theme(
+  #         strip.background = element_blank(),
+  #         strip.text.x = element_blank(),
+  #         plot.title = element_text(hjust = 0.5),
+  #         axis.title.x = element_text(hjust = 1)
+  #       )
+  #   }
+  #   })
   
   
   output$all_answers_text <- DT::renderDT({
@@ -787,6 +925,176 @@ shinyServer(function(input, output, session) {
       ggradar()
   })
   
+  # ===============FRQ GRAPH==========================================
   
+  # map_dropdown_to_operation() is a functino that converts the dropdown menu
+  # options into a digestable format for then dataset
+  
+  map_dropdown_to_operation <- function(selected_value) {
+    switch(selected_value,
+           "Answer" = "answer",
+           "Choice Input" = "choiceInput",
+           "Text Input" = "textInput",
+           stop("Invalid selection"))
+  }
+  
+  # class_size() is a function that computes the size of a class from a given
+  # doenet ID to calculate the max value of the slider
+  
+  class_size <- function() {
+    
+    clean_data <- cleaned_versions()
+    
+    fitlered_classSize <- clean_data %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
+      group_by(userId) %>%
+      count(userId)
+    
+    classSize_cal <- ceiling(max(fitlered_classSize$n)/4)
+    return(classSize_cal)
+  }
+  
+  # The following observe block loads in the size of a class from a given doenet
+  # ID
+  
+  observe({
+    updateSliderInput(session,
+                      "wordcloud_int", 
+                      max = class_size(), 
+                      value = class_size())
+    
+  })
+  
+  # filtered_text1() is a function that generates the data used for graph 1.
+  # The function is different then filtered_text2() since there is an anti-join
+  # using stop_words, words that are common in the English language
+  
+  filtered_text1 <- reactive({
+    
+    component_type_selected <- input$componentType_dropdown
+    
+    operation <- map_dropdown_to_operation(component_type_selected)
+    
+    clean_data <- cleaned_versions()
+    
+    clean_data %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
+      filter(componentType == operation) %>%
+      select(userId, pageNumber, responseText) %>%
+      filter(!is.na(responseText) & !is.null(responseText)) %>%
+      mutate(responseText = as.character(responseText)) %>%
+      filter(!responseText %in% c('NULL', ' ', as.character(-1E6:1E6))) %>%
+      select(userId, pageNumber, responseText) %>%
+      unnest_tokens(word, responseText) %>% 
+      anti_join(stop_words) %>%
+      filter(!word %in% c(as.character(-1E6:1E6))) %>%
+      widyr::pairwise_count(word, userId, sort = TRUE, upper = FALSE)
+  })
+  
+  # filtered_text2() is a function that generates the data used for graph 2.
+  # The function is different then filtered_text1() since there isn't an 
+  # anti-join using stop_words, words that are common in the English language
+  
+  filtered_text2 <- reactive({
+    
+    component_type_selected <- input$componentType_dropdown
+    
+    operation <- map_dropdown_to_operation(component_type_selected)
+    
+    clean_data <- cleaned_versions()
+    
+    clean_data %>%
+      filter(verb %in% c("submitted", "answered", "selected")) %>%
+      filter(componentType == operation) %>%
+      select(userId, pageNumber, responseText) %>%
+      filter(!is.na(responseText) & !is.null(responseText)) %>%
+      mutate(responseText = as.character(responseText)) %>%
+      filter(!responseText %in% c('NULL', ' ', as.character(-1E6:1E6))) %>%
+      select(userId, pageNumber, responseText) %>%
+      widyr::pairwise_count(responseText, userId, sort = TRUE, upper = FALSE)
+  })
+  
+  # The output of the following block of code is a rendered plot of graph 1
+  
+  output$graph1 <- renderPlot({
+    
+    slider_classSize <- input$wordcloud_int
+    
+    temp_data1 <- filtered_text1()
+    
+    filtered_data1 <- temp_data1 %>%
+      filter(n %in% (0:slider_classSize))
+    
+    if (nrow(filtered_data1) == 0) {
+      default_plot <- ggplot() +
+        geom_text(aes(x = 0.5, y = 0.5, label = "No available data to analyze"),
+                  size = 5, color = "red", hjust = 0.5, vjust = 0.5) +
+        theme_void()
+      return(default_plot)
+    } else {
+      graph <- filtered_text1() %>%
+        graph_from_data_frame() %>%
+        ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
+        geom_node_point(size = 5) +
+        geom_node_text(aes(label = name), repel = TRUE, point.padding = unit(0.2, "lines")) +
+        theme_void()
+      
+      return(graph)
+    }
+  })
+  
+  # The output of the following block of code is a rendered plot of graph 2
+  
+  output$graph2 <- renderPlot({
+    
+    slider_classSize <- input$wordcloud_int
+    
+    temp_data2 <- filtered_text2()
+    
+    filtered_data2 <- temp_data2 %>%
+      filter(n %in% (0:slider_classSize))
+    
+    if (nrow(filtered_data2) == 0) {
+      default_plot <- ggplot() +
+        geom_text(aes(x = 0.5, y = 0.5, label = "No available data to analyze"),
+                  size = 5, color = "red", hjust = 0.5, vjust = 0.5) +
+        theme_void()
+      return(default_plot)
+    } else {
+      graph <- filtered_data2 %>%
+        graph_from_data_frame() %>%
+        ggraph(layout = "fr") +
+        geom_edge_link(aes(edge_alpha = n, edge_width = n), edge_colour = "cyan4") +
+        geom_node_point(size = 5) +
+        geom_node_text(aes(label = name), repel = TRUE, point.padding = unit(0.2, "lines")) +
+        theme_void()
+      return(graph)
+    }
+  })
+  
+  # The output of the following block of code is a rendered plot of word cloud
+  
+  output$wordcloud <- renderPlot({
+    
+    slider_classSize <- input$wordcloud_int
+    
+    temp_data2 <- filtered_text2()
+    
+    filtered_data2 <- temp_data2 %>%
+      filter(n %in% (0:slider_classSize))
+    
+    if (nrow(filtered_data2) == 0) {
+      default_plot <- ggplot() +
+        geom_text(aes(x = 0.5, y = 0.5, label = "No available data to analyze"),
+                  size = 5, color = "red", hjust = 0.5, vjust = 0.5) +
+        theme_void()
+      return(default_plot)
+    } else {
+      word <- wordcloud(filtered_data2, scale = c(2, 1), min.freq = 50, colors = rainbow(30))
+      
+      return(word)
+    }
+  })
   
 })

@@ -41,7 +41,7 @@ ui <- fluidPage(
               value = 0),
   # Render the plot
   plotlyOutput("all_answers_plot")
-)
+  )
 
 
 server <- function(input, output, session) {

@@ -35,7 +35,7 @@ ui <- fluidPage(
     column(6, selectInput("page_dropdown", "Select Page", "")),
     column(6, selectInput("item_dropdown", "Select Item", ""))
   ),
-  sliderInput("integer", 
+  sliderInput("slider_wrong", 
               "Most Frequent Wrong Answers",
               min = 0, 
               max = 0,
@@ -51,12 +51,8 @@ server <- function(input, output, session) {
   facet_naming_item <- function() {
     testing_item <- cleaned_versions %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
-      select(item, pageNumber, componentName, responseText) %>%
-      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
-               responseText != "NULL" & responseText != "＿") %>%
-      group_by(item, pageNumber) %>%
-      count(responseText) %>%
-      ungroup() %>%
+      select(item) %>%
+      filter(!is.na(item)) %>%
       distinct(item)
     
     natural_naming_items <- paste0("Item ", testing_item$item)
@@ -66,17 +62,14 @@ server <- function(input, output, session) {
   facet_naming_page <- function() {
     testing_page <- cleaned_versions %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
-      select(item, pageNumber, componentName, responseText) %>%
-      filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) &
-               responseText != "NULL" & responseText != "＿") %>%
-      group_by(item, pageNumber) %>%
-      count(responseText) %>%
-      ungroup() %>%
+      select(pageNumber) %>%
+      filter(!is.na(pageNumber)) %>%
       distinct(pageNumber)
     
     natural_naming_page <- paste0("Page ", testing_page$pageNumber)
     return(natural_naming_page)
   }
+  
   # Observe changes in the item dropdown and update choices for page dropdown accordingly
   observe({
     updateSelectInput(session, "item_dropdown", choices = facet_naming_item())
@@ -88,7 +81,9 @@ server <- function(input, output, session) {
     item_selected <- input$item_dropdown
     page_selected <- input$page_dropdown
     
-    a <- cleaned_versions %>%
+    cleaned_data <- cleaned_versions
+    
+    wrong <- cleaned_data %>%
       filter(verb %in% c("submitted", "answered", "selected")) %>%
       select(itemCreditAchieved, userId, response, responseText, item, componentName, pageNumber) %>%
       filter(componentName != "/aboutSelf" & !is.na(pageNumber) & !is.na(item) & !is.na(responseText)) %>% 
@@ -106,21 +101,21 @@ server <- function(input, output, session) {
         .desc = TRUE
       ) %>% fct_rev())
     
-    if (nrow(a) > 0) {
-      max_value_sliderdf(max(a$n))  # Update the reactive value
+    if (nrow(wrong) > 0) {
+      max_value_sliderdf(max(wrong$n))  # Update the reactive value
       # Update the sliderInput dynamically
-      updateSliderInput(session, "integer", max = max_value_sliderdf(), value = max_value_sliderdf())
+      updateSliderInput(session, "slider_wrong", max = max_value_sliderdf(), value = max_value_sliderdf())
     } else {
       max_value_sliderdf(0)  # Reset the reactive value to 0
       # If 'a' is empty, set the maximum and default value of the slider to 0 or any other appropriate default value
-      updateSliderInput(session, "integer", max = 0, value = 0)
+      updateSliderInput(session, "slider_wrong", max = 0, value = 0)
     }
   })
   # Inside the output$wrong_plot renderPlot function
   output$wrong_plot <- renderPlotly({
     item_selected <- input$item_dropdown
     page_selected <- input$page_dropdown
-    slider_selected <- input$integer
+    slider_selected <- input$slider_wrong
     
     cleaned_data <- cleaned_versions  # Extract the value from the reactive expression
     
